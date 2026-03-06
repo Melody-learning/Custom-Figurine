@@ -197,19 +197,24 @@ export default function CustomizePage() {
     }
     // default
     return {
-      button: 'rounded-full bg-black text-white hover:bg-gray-800',
-      card: 'rounded-xl border shadow-sm',
-      stepActive: 'bg-black text-white',
-      stepCompleted: 'bg-green-500 text-white',
-      stepInactive: 'bg-gray-200 text-gray-500',
+      button: 'rounded-full bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300',
+      card: 'rounded-2xl border shadow-lg bg-white/80 backdrop-blur-md animate-slide-up-fade',
+      stepActive: 'bg-black text-white shadow-md ring-4 ring-gray-100',
+      stepCompleted: 'bg-green-500 text-white shadow-md',
+      stepInactive: 'bg-gray-100 text-gray-400',
     };
   };
 
   const styles = getThemeStyles();
 
   return (
-    <main className="min-h-screen py-8" style={{ backgroundColor: config.colors.backgroundAlt }}>
-      <div className="container mx-auto max-w-4xl px-4">
+    <main className="min-h-screen py-12 relative overflow-hidden" style={{ backgroundColor: config.colors.backgroundAlt }}>
+      {/* Animated Background Gradients */}
+      <div className="absolute top-0 right-0 w-full h-1/2 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
+      <div className="absolute top-20 -left-20 w-96 h-96 bg-gradient-to-r from-purple-200/30 to-pink-200/30 rounded-full blur-3xl animate-float pointer-events-none" style={{ animationDelay: '0s' }} />
+      <div className="absolute bottom-20 -right-20 w-96 h-96 bg-gradient-to-l from-yellow-200/30 to-rose-200/30 rounded-full blur-3xl animate-float pointer-events-none" style={{ animationDelay: '2s' }} />
+
+      <div className="container mx-auto max-w-4xl px-4 relative z-10">
         {/* 步骤指示器 */}
         <div className="mb-8 flex justify-center">
           <div className="flex items-center gap-4">
@@ -248,7 +253,12 @@ export default function CustomizePage() {
               style={{ borderColor: config.colors.border }}
             >
               {uploadedImage ? (
-                <img src={uploadedImage} alt="Uploaded" className="max-h-64 rounded-lg object-contain" />
+                <div className="relative group w-full flex justify-center">
+                  <img src={uploadedImage} alt="Uploaded" className="max-h-80 rounded-xl object-contain shadow-md group-hover:scale-[1.02] transition-transform duration-300" />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-xl transition-opacity duration-300">
+                    <span className="text-white font-medium flex items-center gap-2"><Upload className="w-5 h-5"/> Replace Image</span>
+                  </div>
+                </div>
               ) : (
                 <>
                   <Upload className="mb-4 h-12 w-12" style={{ color: config.colors.textMuted }} />
