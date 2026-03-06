@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp:*)",
+      "Bash(tasklist:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "WebFetch(domain:www.mapiful.com)",
+      "WebSearch",
+      "WebFetch(domain:www.stylekit.top)",
+      "Bash(curl:*)",
+      "Bash(npm run:*)",
+      "Bash(PORT=3002 npm run:*)"
+    ]
+  }
+}
