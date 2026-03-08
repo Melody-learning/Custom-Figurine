@@ -145,8 +145,7 @@ export interface Product {
 
 // 创建结账
 export async function createCheckout(
-  variantId: string,
-  quantity: number = 1
+  items: Array<{ variantId: string; quantity: number; customAttributes?: Array<{ key: string; value: string }> }>
 ) {
   const query = `
     mutation CheckoutCreate($input: CheckoutCreateInput!) {
@@ -175,7 +174,11 @@ export async function createCheckout(
     query,
     variables: {
       input: {
-        lineItems: [{ variantId, quantity }],
+        lineItems: items.map(item => ({
+          variantId: item.variantId,
+          quantity: item.quantity,
+          customAttributes: item.customAttributes
+        })),
       },
     },
   });

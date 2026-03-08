@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 
-export type Theme = 'default' | 'neo-brutalist' | 'minimal' | 'elegant' | 'editorial' | 'watercolor';
+export type Theme = 'default' | 'neo-brutalist' | 'minimal' | 'elegant' | 'editorial' | 'watercolor' | 'cyberpunk' | 'glassmorphism' | 'bento' | 'retro-pop' | 'zen';
 
 interface ThemeState {
   theme: Theme;
@@ -119,6 +119,96 @@ export const themeConfig = {
     styles: {
       button: 'rounded-2xl bg-rose-300 text-white hover:bg-rose-400 shadow-md',
       card: 'border border-rose-200 shadow-md rounded-2xl',
+      section: '',
+    },
+  },
+  cyberpunk: {
+    name: 'Cyberpunk 2077',
+    colors: {
+      primary: '#f3e600',
+      secondary: '#ff003c',
+      background: '#090a0f',
+      backgroundAlt: '#12121c',
+      accent: '#00f0ff',
+      border: '#ff003c',
+      text: '#e6e6e6',
+      textMuted: '#8b8b8b',
+    },
+    styles: {
+      button: 'rounded-none border-2 border-[#00f0ff] bg-transparent text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black uppercase tracking-widest font-bold shadow-[0_0_15px_rgba(0,240,255,0.5)] transition-all',
+      card: 'border border-[#ff003c] bg-black shadow-[4px_4px_0_0_#ff003c] rounded-none',
+      section: '',
+    },
+  },
+  glassmorphism: {
+    name: 'Glassmorphism',
+    colors: {
+      primary: '#ffffff',
+      secondary: '#e2e8f0',
+      background: '#0f172a',
+      backgroundAlt: '#1e293b',
+      accent: '#38bdf8',
+      border: 'rgba(255, 255, 255, 0.1)',
+      text: '#f8fafc',
+      textMuted: '#94a3b8',
+    },
+    styles: {
+      button: 'rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white hover:bg-white/20 transition-all shadow-[0_8px_32px_0_rgba(31,38,135,0.37)]',
+      card: 'bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] rounded-3xl',
+      section: '',
+    },
+  },
+  bento: {
+    name: 'Bento Grid',
+    colors: {
+      primary: '#000000',
+      secondary: '#f5f5f7',
+      background: '#f5f5f7',
+      backgroundAlt: '#ffffff',
+      accent: '#0066cc',
+      border: 'transparent',
+      text: '#1d1d1f',
+      textMuted: '#86868b',
+    },
+    styles: {
+      button: 'rounded-full bg-[#0071e3] text-white hover:bg-[#0077ed] transition-colors',
+      card: 'bg-white rounded-[32px] shadow-[0_4px_24px_rgba(0,0,0,0.06)] border-none',
+      section: '',
+    },
+  },
+  'retro-pop': {
+    name: 'Retro Pop Art',
+    colors: {
+      primary: '#ff3366',
+      secondary: '#00c3ff',
+      background: '#ffeb3b',
+      backgroundAlt: '#ffffff',
+      accent: '#ff9900',
+      border: '#000000',
+      text: '#000000',
+      textMuted: '#333333',
+    },
+    styles: {
+      button: 'rounded-none border-4 border-black bg-[#ff3366] text-white font-black uppercase hover:translate-x-1 hover:translate-y-1 hover:shadow-[0_0_0_0_rgba(0,0,0,1)] shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all',
+      card: 'bg-white border-4 border-black shadow-[8px_8px_0_0_rgba(0,0,0,1)] rounded-none',
+      section: '',
+    },
+  },
+  zen: {
+    name: 'Zen Minimal',
+    colors: {
+      primary: '#2d3748',
+      secondary: '#4a5568',
+      background: '#fdfbf7',
+      backgroundAlt: '#f7f5f0',
+      accent: '#718096',
+      border: '#e2e8f0',
+      text: '#1a202c',
+      textMuted: '#a0aec0',
+    },
+    styles: {
+      button: 'rounded-md bg-[#2d3748] text-white hover:bg-black font-serif tracking-wide transition-colors',
+      card: 'bg-white border border-[#e2e8f0] rounded-none shadow-sm',
       section: '',
     },
   },

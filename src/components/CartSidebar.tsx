@@ -28,8 +28,16 @@ export function CartSidebar() {
 
     setIsCheckingOut(true);
     try {
-      const firstItem = cart[0];
-      const checkout = await createCheckout(firstItem.variantId, firstItem.quantity);
+      const checkoutItems = cart.map(item => ({
+        variantId: item.variantId,
+        quantity: item.quantity,
+        customAttributes: [
+          ...(item.generatedImage ? [{ key: 'Design Image (AI)', value: item.generatedImage }] : []),
+          ...(item.customImage ? [{ key: 'Original Image', value: item.customImage }] : [])
+        ]
+      }));
+
+      const checkout = await createCheckout(checkoutItems);
       window.location.href = checkout.webUrl;
     } catch (error) {
       console.error('Checkout error:', error);

@@ -15,10 +15,9 @@ export function Header() {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const t = (key: any): string => translate(key) as string;
 
-  const themes: Theme[] = ['default', 'neo-brutalist', 'minimal', 'elegant', 'editorial', 'watercolor'];
+  const themes = Object.keys(themeConfig) as Theme[];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b backdrop-blur-md transition-colors bg-opacity-80" style={{ backgroundColor: config.colors.background, borderColor: config.colors.border }}>
