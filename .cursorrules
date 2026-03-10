@@ -19,6 +19,7 @@ All feature development, bug fixes, or system modifications MUST follow the Open
 - ONLY AFTER the user approves the updated specs, are you permitted to modify the source code (`src/`) to reflect the new state of the specs.
 - The code MUST perfectly match what is written in the spec files.
 
-## Communication Requirements
-1. **Language**: Always explain your reasoning and respond to the user in **Chinese (中文)**.
-2. **Transparency**: Always clearly state which phase of the OpenSpec workflow you are currently in.
+## Communication & Documentation Requirements
+1. **Language (User Communication)**: Always explain your reasoning and respond to the user in **Simplified Chinese (简体中文)**.
+2. **Language (Documentation)**: ALL files within the `changes/`, `openspec/`, and `specs/` directories MUST be written in **Simplified Chinese (简体中文)** unless specific technical terms (e.g., GraphQL, React) require English. Do not write specifications in English.
+3. **Transparency**: Always clearly state which phase of the OpenSpec workflow you are currently in.
