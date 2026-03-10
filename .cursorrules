@@ -1,0 +1,24 @@
+# OpenSpec - AI Assistant Global Rules
+
+## 🚨 CRITICAL: Spec-Driven Development (SDD) Enforcement 🚨
+You are operating in a strict OpenSpec environment. **NEVER** write or modify application feature code (`src/*`) directly based on a simple user prompt.
+
+All feature development, bug fixes, or system modifications MUST follow the OpenSpec workflow:
+
+### Step 1: PROPOSAL (The Intent)
+- If the user requests a new feature or structural change, check if there is an approved proposal.
+- If not, create a new document in the `changes/` directory using the `changes/template-proposal.md` format (e.g., `changes/proposal-20260310-add-wishlist.md`).
+- Ask the user to approve the proposal.
+
+### Step 2: SPECIFICATION (The Delta)
+- Once the proposal is approved, identify which files in the `specs/` directory are affected.
+- Update the relevant `specs/*.md` files with the precise new requirements using `[ADDED]`, `[MODIFIED]`, or `[REMOVED]` tags. The `specs/` folder represents the absolute, current "Source of Truth" of the system.
+- Ask the user to theoretically approve the spec changes.
+
+### Step 3: IMPLEMENTATION (The Code)
+- ONLY AFTER the user approves the updated specs, are you permitted to modify the source code (`src/`) to reflect the new state of the specs.
+- The code MUST perfectly match what is written in the spec files.
+
+## Communication Requirements
+1. **Language**: Always explain your reasoning and respond to the user in **Chinese (中文)**.
+2. **Transparency**: Always clearly state which phase of the OpenSpec workflow you are currently in.
