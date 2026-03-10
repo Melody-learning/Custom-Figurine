@@ -50,8 +50,8 @@ export function CartSidebar() {
           variantId: item.variantId,
           quantity: item.quantity,
           customAttributes: [
-            ...(aiImageUrl ? [{ key: 'AI Generated Image', value: aiImageUrl }] : []),
-            ...(originalImageUrl ? [{ key: 'Uploaded Image', value: originalImageUrl }] : [])
+            ...(aiImageUrl ? [{ key: '_AI Generated Image', value: aiImageUrl }] : []),
+            ...(originalImageUrl ? [{ key: '_Uploaded Image', value: originalImageUrl }] : [])
           ]
         };
       }));
