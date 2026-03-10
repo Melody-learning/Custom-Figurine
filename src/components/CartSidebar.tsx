@@ -27,13 +27,33 @@ export function CartSidebar() {
 
     setIsCheckingOut(true);
     try {
-      const checkoutItems = cart.map(item => ({
-        variantId: item.variantId,
-        quantity: item.quantity,
-        customAttributes: [
-          ...(item.generatedImage ? [{ key: 'Design Image (AI)', value: item.generatedImage.length > 500 ? item.generatedImage.substring(0, 500) + '...(truncated)' : item.generatedImage }] : []),
-          ...(item.customImage ? [{ key: 'Original Image', value: item.customImage.length > 500 ? item.customImage.substring(0, 500) + '...(truncated)' : item.customImage }] : [])
-        ]
+      const uploadImage = async (imageSrc: string) => {
+        if (!imageSrc.startsWith('data:')) return imageSrc;
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: imageSrc })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Image upload failed');
+        return data.url;
+      };
+
+      const checkoutItems = await Promise.all(cart.map(async (item) => {
+        let aiImageUrl = item.generatedImage;
+        let originalImageUrl = item.customImage;
+
+        if (aiImageUrl?.startsWith('data:')) aiImageUrl = await uploadImage(aiImageUrl);
+        if (originalImageUrl?.startsWith('data:')) originalImageUrl = await uploadImage(originalImageUrl);
+
+        return {
+          variantId: item.variantId,
+          quantity: item.quantity,
+          customAttributes: [
+            ...(aiImageUrl ? [{ key: 'Design Image (AI)', value: aiImageUrl }] : []),
+            ...(originalImageUrl ? [{ key: 'Original Image', value: originalImageUrl }] : [])
+          ]
+        };
       }));
 
       const response = await fetch('/api/checkout', {
