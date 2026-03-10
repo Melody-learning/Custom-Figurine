@@ -2,7 +2,6 @@
 
 import { X, Minus, Plus, Trash2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
-import { createCheckout } from '@/lib/shopify';
 import { useState } from 'react';
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
@@ -37,8 +36,18 @@ export function CartSidebar() {
         ]
       }));
 
-      const checkout = await createCheckout(checkoutItems);
-      window.location.href = checkout.webUrl;
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: checkoutItems })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Checkout API failed');
+      }
+      
+      const data = await response.json();
+      window.location.href = data.url;
     } catch (error) {
       console.error('Checkout error:', error);
       alert(t('checkoutError'));

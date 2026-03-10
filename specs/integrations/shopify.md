@@ -21,3 +21,20 @@
 必须运用如下技巧：
 在 Shopify 后台数据库实质建立且且仅且设定一个具有巨大尺寸通用包容性的 "空底盘基座" 定位占位标品产品 (Placeholder Base Custom Product ID)。
 将所有由于客户主观创意变化（如自己通过生图提交的高光模型图URL源链接、在文本框留下的诸如：“我需要增加手持盾牌”的手作嘱托细节留言、乃至颜色设定），统一利用 API 调用时将数据打包装载进属于 GraphQL 请求包子项目里的 `Line Item Properties` 字典属性中，伴随购物车一同落锁传送进云端并进入商家的实质订单管理后台系统中供出库审订人员溯源加工。
+
+## 4. 后台配置与 PayPal 绑定指南 (Owner Setup Guide)
+由于建单强依赖真实的接口互通，需要项目所有者 (Owner) 在 Shopify 界面执行以下手动前置操作：
+
+### 4.1 获取 Storefront API Token
+1. 登录 Shopify Admin。
+2. 左侧导航进入 **"Settings" (设置)** -> **"Apps and sales channels" (应用和销售渠道)**。
+3. 点击 **"Develop apps" (开发应用)**，然后创建一个名为 `Custom Figurine Storefront` 的新应用。
+4. 进入应用的 **"Configuration" (配置)** 标签，点击配置 **"Storefront API integration"**。
+5. 勾选必要的读取权限（如：`unauthenticated_read_product_listings`, `unauthenticated_read_product_tags`, `unauthenticated_write_checkouts` 等建单必需权限）。
+6. 安装应用并获取生成的 **Storefront API access token**。请提供给我或者将其写入项目的 `.env` 配置文件中。
+
+### 4.2 配置 PayPal 企业账户收单
+1. 在 Shopify Admin 进入 **"Settings" (设置)** -> **"Payments" (收款)**。
+2. 在 **Supported payment methods** 中找到 **PayPal** 模块。
+3. 点击激活，并按指引输入您现有的 PayPal 企业账户凭据进行 OAuth 绑定。
+4. ** 沙盒测试声明**: 强烈建议在此处首先勾选“Enable test mode”或申请一个 PayPal Sandbox 账户，以便在我们编写前端代码期间能全链路测试整个购买流程而不会扣除您的真实款项。功能全完备验收后再关闭沙盒回到 Live 环境。
