@@ -143,18 +143,18 @@ export interface Product {
   };
 }
 
-// 创建结账
+// 创建购物车并返回结账链接
 export async function createCheckout(
   items: Array<{ variantId: string; quantity: number; customAttributes?: Array<{ key: string; value: string }> }>
 ) {
   const query = `
-    mutation CheckoutCreate($input: CheckoutCreateInput!) {
-      checkoutCreate(input: $input) {
-        checkout {
+    mutation cartCreate($input: CartInput!) {
+      cartCreate(input: $input) {
+        cart {
           id
-          webUrl
+          checkoutUrl
         }
-        checkoutUserErrors {
+        userErrors {
           message
           field
         }
@@ -163,31 +163,32 @@ export async function createCheckout(
   `;
 
   const data = await shopifyFetch<{
-    checkoutCreate: {
-      checkout: {
+    cartCreate: {
+      cart: {
         id: string;
-        webUrl: string;
+        checkoutUrl: string;
       };
-      checkoutUserErrors: Array<{ message: string; field: string[] }>;
+      userErrors: Array<{ message: string; field: string[] }>;
     };
   }>({
     query,
     variables: {
       input: {
-        lineItems: items.map(item => ({
-          variantId: item.variantId,
+        lines: items.map((item) => ({
+          merchandiseId: item.variantId,
           quantity: item.quantity,
-          customAttributes: item.customAttributes
+          attributes: item.customAttributes || [],
         })),
       },
     },
   });
 
-  if (data.checkoutCreate.checkoutUserErrors.length > 0) {
+  if (data.cartCreate.userErrors.length > 0) {
     throw new Error(
-      data.checkoutCreate.checkoutUserErrors.map((e) => e.message).join(', ')
+      data.cartCreate.userErrors.map((e) => e.message).join(', ')
     );
   }
 
-  return data.checkoutCreate.checkout;
+  // To remain compatible with the previous caller
+  return { webUrl: data.cartCreate.cart.checkoutUrl };
 }
