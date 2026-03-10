@@ -20,7 +20,10 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('API Checkout Error:', error);
     return NextResponse.json(
-      { error: 'Failed to create checkout session', details: error.message || String(error) },
+      { 
+        error: 'Failed to create checkout session', 
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }

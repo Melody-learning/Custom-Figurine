@@ -42,15 +42,16 @@ export function CartSidebar() {
         body: JSON.stringify({ items: checkoutItems })
       });
       
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error('Checkout API failed');
+        throw new Error(data.details || data.error || 'Checkout API failed');
       }
       
-      const data = await response.json();
       window.location.href = data.url;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Checkout error:', error);
-      alert(t('checkoutError'));
+      alert(`${t('checkoutError')}: ${error.message || ''}`);
     } finally {
       setIsCheckingOut(false);
     }
