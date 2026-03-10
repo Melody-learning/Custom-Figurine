@@ -16,18 +16,18 @@
 - `[ADDED]` 订单生成策略：后端收到用户的定制属性与 Cloud Blob 图片 URL 后，通过 Admin API 创建一条全新的草稿订单 (Draft Order)。
 
 ### 针对 `specs/business/checkout-flow.md` 的修改：
-- `[MODIFIED]` Checkout 生命周期变更为：获取定制属性 -> Vercel Blob 上传图片 -> Next.js Backend 接收图片 URL -> Backend 调 Shopify Admin API 创建带有 `image` 属性（直接绑定图片）的 Custom Line Item 或占位实体 Product -> Backend 生成 Draft Order Invoice URL -> 前端 Redirect。
+- `[MODIFIED]` Checkout 生命周期变更为：获取定制属性 -> Vercel Blob 上传图片 -> Next.js Backend 接收图片 URL -> Backend 调 Shopify Admin API -> 传入真实的 Variant ID 并在 customAttributes 注入图片 URL -> Backend 生成 Draft Order Invoice URL -> 前端 Redirect。
 
 ## 4. 实施 Checklist (Implementation Plan)
-- [ ] 1. 提交本 Proposal，用户确认并补充提供后台高权限的 `SHOPIFY_ADMIN_ACCESS_TOKEN`。
-- [ ] 2. 依据提议修改 `specs/integrations/shopify.md` 并取得人工同意。
-- [ ] 3. 在本地及 Vercel 注入 `SHOPIFY_ADMIN_ACCESS_TOKEN` 环境变量。
-- [ ] 4. 重构 `src/app/api/checkout/route.ts` 和 `src/lib/shopify.ts`，彻底改为基于 GraphQL Admin API (或 REST API) 动态创建带有图片的 Draft Order。
-- [ ] 5. 人工从浏览器测试端到端完整的 Checkout 流程，验证图片能在最后结账页显示。
+- [x] 1. 提交本 Proposal，用户确认并补充提供后台高权限的 `SHOPIFY_ADMIN_ACCESS_TOKEN`。
+- [x] 2. 依据提议修改 `specs/integrations/shopify.md` 并取得人工同意。
+- [x] 3. 在本地及 Vercel 注入 `SHOPIFY_ADMIN_ACCESS_TOKEN` 环境变量。
+- [x] 4. 重构 `src/app/api/checkout/route.ts` 和 `src/lib/shopify.ts`，彻底改为基于 GraphQL Admin API (或 REST API) 动态创建带有图片的 Draft Order。
+- [x] 5. 人工从浏览器测试端到端完整的 Checkout 流程，由于 Shopify 图片 CDN 的异步处理机制限制，最终架构变更为：**直接传入预设变体 ID，让原生的目录商品图直接拉取显示，同时云端图片链接存放在后端的订单发货属性中。**
 
 ---
 ## 状态区
 - [x] 提出中 (Draft)
-- [ ] 用户已审查并同意 Specs 修改 (Specs Approved)
-- [ ] 代码实施完成待验收 (Implemented)
-- [ ] **完成闭环 (Done)**
+- [x] 用户已审查并同意 Specs 修改 (Specs Approved)
+- [x] 代码实施完成待验收 (Implemented)
+- [x] **完成闭环 (Done)**

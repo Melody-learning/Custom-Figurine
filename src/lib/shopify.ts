@@ -2,8 +2,10 @@
 
 const domain = process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN!;
 const storefrontAccessToken = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN!;
+const adminAccessToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN!;
 
-const endpoint = `https://${domain}/api/2024-01/graphql.json`;
+const storefrontEndpoint = `https://${domain}/api/2024-01/graphql.json`;
+const adminEndpoint = `https://${domain}/admin/api/2024-01/graphql.json`;
 
 interface ShopifyResponse<T> {
   data: T;
@@ -17,11 +19,37 @@ export async function shopifyFetch<T>({
   query: string;
   variables?: Record<string, unknown>;
 }): Promise<T> {
-  const response = await fetch(endpoint, {
+  const response = await fetch(storefrontEndpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Shopify-Storefront-Access-Token': storefrontAccessToken,
+    },
+    body: JSON.stringify({ query, variables }),
+    cache: 'no-store',
+  });
+
+  const json: ShopifyResponse<T> = await response.json();
+
+  if (json.errors) {
+    throw new Error(json.errors.map((e) => e.message).join(', '));
+  }
+
+  return json.data;
+}
+
+export async function adminShopifyFetch<T>({
+  query,
+  variables,
+}: {
+  query: string;
+  variables?: Record<string, unknown>;
+}): Promise<T> {
+  const response = await fetch(adminEndpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': adminAccessToken,
     },
     body: JSON.stringify({ query, variables }),
     cache: 'no-store',
@@ -143,16 +171,19 @@ export interface Product {
   };
 }
 
-// 创建购物车并返回结账链接
+// 创建结账（底层改为使用 Admin API 生成带图片的 Draft Order 发票）
 export async function createCheckout(
   items: Array<{ variantId: string; quantity: number; customAttributes?: Array<{ key: string; value: string }> }>
 ) {
+  // Build the Draft Order using standard Variant IDs 
+  // This ensures the predefined catalog image from Shopify is used on the Checkout page, avoiding a gray placeholder.
+  // The custom image URL from the user is injected via customAttributes so backend fulfillment can see it.
   const query = `
-    mutation cartCreate($input: CartInput!) {
-      cartCreate(input: $input) {
-        cart {
+    mutation draftOrderCreate($input: DraftOrderInput!) {
+      draftOrderCreate(input: $input) {
+        draftOrder {
           id
-          checkoutUrl
+          invoiceUrl
         }
         userErrors {
           message
@@ -162,11 +193,29 @@ export async function createCheckout(
     }
   `;
 
-  const data = await shopifyFetch<{
-    cartCreate: {
-      cart: {
+  const cleanItems = items.map((item) => {
+    const lineItemInput: any = {
+      variantId: item.variantId,
+      quantity: item.quantity,
+    };
+
+    if (item.customAttributes && item.customAttributes.length > 0) {
+      lineItemInput.customAttributes = item.customAttributes
+        .filter(attr => attr.value && attr.value.trim() !== '')
+        .map(attr => ({
+          key: attr.key,
+          value: String(attr.value)
+        }));
+    }
+
+    return lineItemInput;
+  });
+
+  const data = await adminShopifyFetch<{
+    draftOrderCreate: {
+      draftOrder: {
         id: string;
-        checkoutUrl: string;
+        invoiceUrl: string;
       };
       userErrors: Array<{ message: string; field: string[] }>;
     };
@@ -174,21 +223,18 @@ export async function createCheckout(
     query,
     variables: {
       input: {
-        lines: items.map((item) => ({
-          merchandiseId: item.variantId,
-          quantity: item.quantity,
-          attributes: item.customAttributes || [],
-        })),
+        lineItems: cleanItems,
+        tags: ["custom-figurine", "api-generated-draft"],
+        note: "Checkout generated from frontend custom figurine app."
       },
     },
   });
 
-  if (data.cartCreate.userErrors.length > 0) {
+  if (data.draftOrderCreate.userErrors.length > 0) {
     throw new Error(
-      data.cartCreate.userErrors.map((e) => e.message).join(', ')
+      data.draftOrderCreate.userErrors.map((e) => e.message).join(', ')
     );
   }
 
-  // To remain compatible with the previous caller
-  return { webUrl: data.cartCreate.cart.checkoutUrl };
+  return { webUrl: data.draftOrderCreate.draftOrder.invoiceUrl };
 }

@@ -11,13 +11,17 @@
 graph TD
     A[用户 Browser] -->|页面渲染与交互| B(Next.js App Router 前端)
     B -->|3D预览与沉浸动效| C(R3F & CSS 动效层)
-    B -->|API 请求| D(Next.js API Routes 接口层)
+    B -->|用户鉴权/订单/API| D(Next.js API Routes 接口层)
     
-    D -->|集成| E[Shopify Storefront API]
-    D -->|集成| F[AI 生成后端 / Replicate]
+    D -->|数据存取| E[(Vercel Postgres/KV + Blob)]
+    D -->|集成| F[Shopify Storefront/Admin API]
+    D -->|集成| G[AI 生成后端 / Replicate]
     
-    E --> G[(Shopify 商店后台)]
-    F --> H[(自建/第三方 3D 服务)]
+    H[内部管理员 Browser] -->|系统管控/发货| I(定制 Admin Dashboard后台)
+    I --> D
+    
+    F --> J[(Shopify后台底层核心)]
+    G --> K[(自建/第三方 3D 服务)]
 ```
 
 ## 3. 技术核心选型 (Tech Stack)
@@ -31,8 +35,12 @@ graph TD
 
 ### 3.2 服务层 (Backend API)
 - **网关角色**: **Next.js API Routes** - 扮演与第三方厂商间隔离密钥的 Bff (Backend for Frontend)。不受阻于跨域。
+- **数据流转**: 处理订单同步、Webhooks、以及连接 AI 工作流的长轮询架构。
+- **自研简易后台**: 基于 Next.js 提供 /admin 私有化路由管控订单审核与物流回传。
 
 ### 3.3 外部设施层 (Infrastructures)
-- **部署宿主**: **Vercel** - 利用 Vercel Global Edge Network，天然适配 Next.js 提供极快全球访问的 CDN。
-- **电商基石**: **Shopify** - 提供底层购物车持久化、商品模型数据、多币种结账能力 `@shopify/shopify-api`。
-- **AI 生图**: 待接入 Replicate、Stability AI 或自研定制微型模型服务。
+- **部署宿主**: **Vercel** - 天然适配 Next.js 提供极快全球访问的 CDN。
+- **账户体系与数据库**: 拟采用 NextAuth.js (Auth.js) 搭配 Vercel Postgres/KV 管理独立站自有会员账号（记录生成历史、游离于 Shopify 的多重信息）。
+- **图片云存储**: **Vercel Blob** - 用于沉淀用户上传的原图与 AI 产出的资产。
+- **电商基石**: **Shopify** - 提供底层购物车持久化、商品模型数据、多币种结账能力 (`@shopify/shopify-api`)。
+- **AI 生图**: 接入 Replicate、Stability AI 或自研定制微型模型服务。
