@@ -29,7 +29,7 @@ async function testSizes() {
       });
       const text = await response.text();
       console.log(`${size}KB -> Status: ${response.status}. Body start: ${text.substring(0, 50).replace(/\n/g, '')}`);
-    } catch(e) {
+    } catch(e: any) {
       console.log(`${size}KB -> Fetch failed:`, e.message);
     }
   }
