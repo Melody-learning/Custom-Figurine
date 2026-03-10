@@ -31,8 +31,8 @@ export function CartSidebar() {
         variantId: item.variantId,
         quantity: item.quantity,
         customAttributes: [
-          ...(item.generatedImage ? [{ key: 'Design Image (AI)', value: item.generatedImage }] : []),
-          ...(item.customImage ? [{ key: 'Original Image', value: item.customImage }] : [])
+          ...(item.generatedImage ? [{ key: 'Design Image (AI)', value: item.generatedImage.length > 500 ? item.generatedImage.substring(0, 500) + '...(truncated)' : item.generatedImage }] : []),
+          ...(item.customImage ? [{ key: 'Original Image', value: item.customImage.length > 500 ? item.customImage.substring(0, 500) + '...(truncated)' : item.customImage }] : [])
         ]
       }));
 

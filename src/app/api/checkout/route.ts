@@ -22,7 +22,11 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { 
         error: 'Failed to create checkout session', 
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
+        envSnapshot: {
+          domain: process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN,
+          tokenPrefix: process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN?.substring(0, 5)
+        }
       },
       { status: 500 }
     );
