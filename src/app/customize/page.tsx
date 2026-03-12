@@ -112,20 +112,36 @@ export default function CustomizePage() {
     }
   };
 
-  // 模拟 AI 生成图片
+  // 模拟 AI 生成图片 (Network Proxy to Mock Server)
   const handleGenerate = async () => {
     if (!uploadedImage) return;
 
     setGenerationStatus('generating');
     setStep('generate');
 
-    // 模拟 API 延迟
-    await new Promise((resolve) => setTimeout(resolve, 2500));
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: uploadedImage }),
+      });
 
-    // 暂时使用上传的图片作为"生成"结果
-    setGeneratedImage(uploadedImage);
-    setGenerationStatus('success');
-    setStep('select');
+      if (!response.ok) {
+        throw new Error('Failed to generate image');
+      }
+
+      const data = await response.json();
+      
+      // Use the returned high-quality 3D mock rendering
+      setGeneratedImage(data.resultUrl);
+      setGenerationStatus('success');
+      setStep('select');
+    } catch (error) {
+      console.error('Generation Error:', error);
+      setGenerationStatus('idle'); // Rollback on failure
+      setStep('upload');
+      alert('AI Generation Mock Failed');
+    }
   };
 
   // 加入购物车
