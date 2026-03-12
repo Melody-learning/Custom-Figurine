@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { CartItem, ImageGenerationStatus, GenerationResult } from '@/types';
 
 interface AppState {
@@ -22,40 +23,53 @@ interface AppState {
   setCartOpen: (open: boolean) => void;
 }
 
-export const useStore = create<AppState>((set) => ({
-  // 购物车
-  cart: [],
-  addToCart: (item) =>
-    set((state) => ({
-      cart: [
-        ...state.cart,
-        {
-          ...item,
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        },
-      ],
-    })),
-  removeFromCart: (id) =>
-    set((state) => ({
-      cart: state.cart.filter((item) => item.id !== id),
-    })),
-  updateQuantity: (id, quantity) =>
-    set((state) => ({
-      cart: state.cart.map((item) =>
-        item.id === id ? { ...item, quantity } : item
-      ),
-    })),
-  clearCart: () => set({ cart: [] }),
+export const useStore = create<AppState>()(
+  persist(
+    (set) => ({
+      // 购物车
+      cart: [],
+      addToCart: (item) =>
+        set((state) => ({
+          cart: [
+            ...state.cart,
+            {
+              ...item,
+              id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            },
+          ],
+        })),
+      removeFromCart: (id) =>
+        set((state) => ({
+          cart: state.cart.filter((item) => item.id !== id),
+        })),
+      updateQuantity: (id, quantity) =>
+        set((state) => ({
+          cart: state.cart.map((item) =>
+            item.id === id ? { ...item, quantity } : item
+          ),
+        })),
+      clearCart: () => set({ cart: [] }),
 
-  // AI 生图
-  uploadedImage: null,
-  setUploadedImage: (image) => set({ uploadedImage: image }),
-  generatedImage: null,
-  setGeneratedImage: (image) => set({ generatedImage: image }),
-  generationStatus: 'idle',
-  setGenerationStatus: (status) => set({ generationStatus: status }),
+      // AI 生图
+      uploadedImage: null,
+      setUploadedImage: (image) => set({ uploadedImage: image }),
+      generatedImage: null,
+      setGeneratedImage: (image) => set({ generatedImage: image }),
+      generationStatus: 'idle',
+      setGenerationStatus: (status) => set({ generationStatus: status }),
 
-  // 购物车侧边栏
-  isCartOpen: false,
-  setCartOpen: (open) => set({ isCartOpen: open }),
-}));
+      // 购物车侧边栏
+      isCartOpen: false,
+      setCartOpen: (open) => set({ isCartOpen: open }),
+    }),
+    {
+      name: 'figurine-storage',
+      // We only want to persist cart items and generated/uploaded images
+      partialize: (state) => ({
+        cart: state.cart,
+        uploadedImage: state.uploadedImage,
+        generatedImage: state.generatedImage,
+      }),
+    }
+  )
+);
