@@ -23,11 +23,14 @@
 - **Phase 5: 配置反向回调 (Webhooks & Callbacks)** : 
   - 回到 Google Cloud Console 将重定向 URI 改为正式生产地址。
   - 回到 Shopify 把 Webhook 推送地址绑定为 `https://minimoi.net/api/webhooks/shopify`。
+- **Phase 6: 全链路回归测试** : 
+  - [x] 确保 `https://minimoi.net` 页面顺利呈现首页与动态头图。
+  - [x] 进行一次完整的 Auth.js 云端登录测试。
 
 ---
 ## 状态区
 - [x] 提出中 (Draft)
 - [x] 等待用户审查并批复 Proposal (Pending User Approval)
 - [x] 修改并合入规范 Specs (Specs Updated)
-- [ ] 物理代码实施完成 (Implemented)
+- [x] 物理代码实施完成 (Implemented)
 - [ ] 完成闭环 (Done)
