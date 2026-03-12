@@ -8,6 +8,14 @@
 - `SHOPIFY_STORE_DOMAIN` (必填指引: Shopify提供的系统级三级域名，例如: `custom-figurine.myshopify.com`。绝非公开购买的常规运营域名，而是用于网关交互的基础 Domain)。
 - `SHOPIFY_STOREFRONT_ACCESS_TOKEN` (必填指引: 在应用商城自主生成的，权限设定仅仅可用于无头读写前台的商品大纲与装载创建购物车通信凭证，无需具有任何危险的后端管理与破坏权限。)
 
+**Admin API 高级权限 (必须配置二者之一以生成草稿订单)**:
+> 基于 Shopify 平台的迭代演进，目前系统支持以下**两套独立轨道**的后台授权通信方式，可根据您的应用创建渠道任选其一：
+- **方案 A (Store Admin 后台创建的 Custom App)**：
+  - `SHOPIFY_ADMIN_ACCESS_TOKEN` (必填指引: 取自 Store Admin -> Develop Apps。格式严格为 `shpat_xxx...`。代码请求头采用 `X-Shopify-Access-Token` 单一验证。)
+- **方案 B (Partner Dev Dashboard 创建的 Public/Custom App)**：
+  - 需成对提供 `SHOPIFY_ADMIN_API_KEY` (即 Client ID) 与 `SHOPIFY_ADMIN_API_SECRET` (即 Client Secret，通常以 `shpss_` 开头)。
+  - 代码内部将自动对其执行 `Base64(ID:Secret)` 编码转化，并通过 `Authorization: Basic` 的标准 Basic Auth 取代 `shpat_` 头机制。
+
 > [!WARNING]
 > 凭证缺位应对措施: 根据历史追认，当系统未能从终端拥有者 (`USER`) 拿到实质运行的上述两项正式 Token 时。在 UI 开发过程中，允许 API 暂时打回并投出具有结构相同但为 Mocked 随机模拟数据的模拟件以确保视觉流程通过，而不是触发雪崩级 Error 让项目挂起。
 
