@@ -4,8 +4,18 @@
 
 ## 1. 实验性跑通测试阶段基准 (Test-Run & Mocking Env)
 当因商业层考量、供应商选型还未尘埃落定或提供实际具有余额 Token 供调用测试前：
-- 必须要提供一个用代码伪造写死并带有真实显式延迟量（明确设置一个 `setTimeout(..., 3000)`）的替身 Mock Server 甚至 API Route 挂接作为测试代理者。
-- 此代理者只需粗鲁接纳无论何种格式的前端传来的原生图，并在经历了枯燥且伪装成努力加载渲染进程的等待结束后，在终端把写于资源代码仓深处的一张演示用的、极为逼真的 3D 转换最终结果示例图 `(比如: /images/after_photo.jpg)` 返回成前端 UI 中的新展现介质，来打平与跑通并完成用户心智体验的“黑盒”。
+- 必须要提供一个用代码伪造写死并带有真实显式延迟量（明确设置一个 `setTimeout(..., 3000)`）的替身 Mock Server 挂接作为测试代理者。
+- **阶段一 API 契约协议 (Mocking API Contract)**：
+  - **端点路由**: `POST /api/generate`
+  - **接收载荷**: `{ image: string (Base64 or Blob URL representing the original 2D photo) }`
+  - **返回结果**: 经过 3 秒系统锁死倒数后，固定返回：
+    ```json
+    {
+      "status": "success",
+      "resultUrl": "/images/mock-3d-result.webp"
+    }
+    ```
+  - **前端职责**: Frontend `/customize` UI 需要将原本极简的直接状态切换，改为真实的 HTTP 请求，并使用服务端传回的 `resultUrl` 作为下一环节（加入购物车与 Profile 订单展示）的核心渲染素材。这保障了用户心智体验的“黑盒”完全跑通。
 
 ## 2. 正式接入与商用层流转规范 (Production Standardized API)
 - 备选核心提供商网络层：倾向直接握手利用 Replicate 图像引擎挂载的衍生微调开源库 / 或者直签企业级 Stability API 原生接口服务。
