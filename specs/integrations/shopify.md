@@ -8,14 +8,14 @@
 - `SHOPIFY_STORE_DOMAIN` (必填指引: Shopify提供的系统级三级域名，例如: `custom-figurine.myshopify.com`。绝非公开购买的常规运营域名，而是用于网关交互的基础 Domain)。
 - `SHOPIFY_STOREFRONT_ACCESS_TOKEN` (必填指引: 在应用商城自主生成的，权限设定仅仅可用于无头读写前台的商品大纲与装载创建购物车通信凭证，无需具有任何危险的后端管理与破坏权限。)
 
-**Admin API 高级权限 (必须配置二者之一以生成草稿订单)**:
-> 基于 Shopify 平台的迭代演进，目前系统支持以下**两套独立轨道**的后台授权通信方式，可根据您的应用创建渠道任选其一：
-- **方案 A (Store Admin 后台创建的 Custom App)**：
-  - `SHOPIFY_ADMIN_ACCESS_TOKEN` (必填指引: 取自 Store Admin -> Develop Apps。格式严格为 `shpat_xxx...`。代码请求头采用 `X-Shopify-Access-Token` 单一验证。)
-- **方案 B (Partner Dev Dashboard 创建的 Public/Custom App)**：
-  - 需成对提供 `SHOPIFY_ADMIN_API_KEY` (即 Client ID) 与 `SHOPIFY_ADMIN_API_SECRET` (即 Client Secret，通常以 `shpss_` 开头)。
-  - 代码内部将自动对其执行 `Base64(ID:Secret)` 编码转化，并通过 `Authorization: Basic` 的标准 Basic Auth 取代 `shpat_` 头机制。
-
+**Admin API 高级权限 (严格基于 Dev Dashboard OAuth 应用)**:
+> 根据 Shopify 最新的 API 安全集成规范，本项目摒弃了传统的单店自建应用（无安全时效的 `shpat_` 密钥）以及 Basic Auth 头。全面采用安全的 **OAuth 2.0 客户端凭证授权流 (Client Credentials Grant)**：
+- 必填环境变量对：
+  - `SHOPIFY_ADMIN_API_KEY` (取自 Shopify Dev Dashboard -> 您的应用 -> Client ID)。
+  - `SHOPIFY_ADMIN_API_SECRET` (取自同页面的 Client Secret，通常以 `shpss_` 开头)。
+- **鉴权闭环动作机制**：
+  每次服务端（Next.js API）准备去执行如创建草稿订单等侵入式写操作前，都会自动携带这组双密钥主动向 Shopify 底层的 `/admin/oauth/access_token` 发起 `grant_type: client_credentials` 的静默提报。
+  系统会即刻签发一张仅存活 24 小时的临时门票 (Access Token)，代码再持此高优门票走入后备箱建单，实现完全不打扰前端买家页面的金库级安全接驳。
 > [!WARNING]
 > 凭证缺位应对措施: 根据历史追认，当系统未能从终端拥有者 (`USER`) 拿到实质运行的上述两项正式 Token 时。在 UI 开发过程中，允许 API 暂时打回并投出具有结构相同但为 Mocked 随机模拟数据的模拟件以确保视觉流程通过，而不是触发雪崩级 Error 让项目挂起。
 
