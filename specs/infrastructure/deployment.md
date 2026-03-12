@@ -13,12 +13,16 @@
 | --- | --- | --- | --- |
 | `NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN` | Frontend / Backend | No | 无限制，浏览器可读 |
 | `NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN` | Frontend / Backend | No | 暴露不影响系统安全 |
-| `SHOPIFY_ADMIN_ACCESS_TOKEN` | Backend Only | Yes | **绝不**允许泄露至前端 |
-| `SHOPIFY_WEBHOOK_SECRET` | Backend Only | Yes | 用于校验验签，极其机密 |
+| `SHOPIFY_ADMIN_ACCESS_TOKEN` | Backend Only | Yes | **弃用** (不再维护单密码) |
+| `SHOPIFY_ADMIN_API_KEY` | Backend Only | Yes | Shopify Dev App 凭据 |
+| `SHOPIFY_ADMIN_API_SECRET` | Backend Only | Yes | Shopify Dev App 密钥 |
 | `DATABASE_URL` | Backend Only | Yes | Postgres 命脉，极其机密 |
 | `AUTH_SECRET` | Backend Only | Yes | Auth.js 加解密命脉 |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Backend Only | Yes | OAuth2 资产 |
-| `EMAIL_SERVER` / `EMAIL_FROM` | Backend Only | Yes | SMTP 发信通道 |
+| `BLOB_READ_WRITE_TOKEN` | Backend Only | Yes | Vercel Blob 存储直传鉴权使用 (`/api/upload-token` 路由消费此 Key 进行下发授权) |
+
+### 架构约束特别声明 (Architectural Constraints)
+> **Vercel Payload 413 拦截**: 鉴于 Vercel 对 Serverless Functions 施加了严格的 4.5MB Payload 上限，任何由前端带 Base64 实体进行的图片上传请求都不允许经过后端 API Route 中转。必须且只能使用 `@vercel/blob/client` 的 Client-Side Upload 机制，经由前端请求 `/api/upload-token` 获取短暂签发权限后直接将文件推入边缘存储池。
 
 ## 3. 域名解析章程 (Domain DNS Integration)
 为了最大化利用 Vercel CDN 的全球加速与抗 DDoS 属性：
