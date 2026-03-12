@@ -57,15 +57,34 @@ export async function adminShopifyFetch<T>({
     'Content-Type': 'application/json',
   };
 
-  // Support both Admin Access Token (shpat_) and Dev Dashboard API Key + Secret (shpss_)
+  // Support both Admin Access Token (shpat_) and Dev Dashboard API Key + Secret (OAuth Client Credentials)
+  let resolvedAccessToken = adminAccessToken;
+
   if (adminApiKey && adminApiSecret) {
-    const credentials = Buffer.from(`${adminApiKey}:${adminApiSecret}`).toString('base64');
-    headers['Authorization'] = `Basic ${credentials}`;
-  } else if (adminAccessToken) {
-    headers['X-Shopify-Access-Token'] = adminAccessToken;
-  } else {
+    // Exchange Client Credentials for an Access Token
+    const tokenResponse = await fetch(`https://${domain}/admin/oauth/access_token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'client_credentials',
+        client_id: adminApiKey,
+        client_secret: adminApiSecret
+      }),
+      cache: 'no-store'
+    });
+
+    const tokenData = await tokenResponse.json();
+    if (!tokenResponse.ok || !tokenData.access_token) {
+      throw new Error(`Failed to exchange Shopify Client Credentials: ${JSON.stringify(tokenData)}`);
+    }
+    resolvedAccessToken = tokenData.access_token;
+  }
+
+  if (!resolvedAccessToken) {
     throw new Error('Missing Shopify Admin API credentials in Vercel. Provide either SHOPIFY_ADMIN_API_KEY & SECRET or SHOPIFY_ADMIN_ACCESS_TOKEN.');
   }
+
+  headers['X-Shopify-Access-Token'] = resolvedAccessToken;
 
   const response = await fetch(adminEndpoint, {
     method: 'POST',
