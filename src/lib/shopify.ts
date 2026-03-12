@@ -32,7 +32,12 @@ export async function shopifyFetch<T>({
   const json: ShopifyResponse<T> = await response.json();
 
   if (json.errors) {
-    throw new Error(json.errors.map((e) => e.message).join(', '));
+    const errorDetails = Array.isArray(json.errors) 
+      ? json.errors.map((e: any) => e?.message || JSON.stringify(e)).join(', ')
+      : typeof json.errors === 'string' 
+        ? json.errors 
+        : JSON.stringify(json.errors);
+    throw new Error(errorDetails);
   }
 
   return json.data;
@@ -58,7 +63,12 @@ export async function adminShopifyFetch<T>({
   const json: ShopifyResponse<T> = await response.json();
 
   if (json.errors) {
-    throw new Error(json.errors.map((e) => e.message).join(', '));
+    const errorDetails = Array.isArray(json.errors) 
+      ? json.errors.map((e: any) => e?.message || JSON.stringify(e)).join(', ')
+      : typeof json.errors === 'string' 
+        ? json.errors 
+        : JSON.stringify(json.errors);
+    throw new Error(errorDetails);
   }
 
   return json.data;
