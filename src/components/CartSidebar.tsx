@@ -5,6 +5,7 @@ import { useStore } from '@/lib/store';
 import { useState } from 'react';
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
+import { upload } from '@vercel/blob/client';
 
 export function CartSidebar() {
   const { cart, isCartOpen, setCartOpen, removeFromCart, updateQuantity } = useStore();
@@ -29,14 +30,19 @@ export function CartSidebar() {
     try {
       const uploadImage = async (imageSrc: string) => {
         if (!imageSrc.startsWith('data:')) return imageSrc;
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: imageSrc })
+        
+        // Convert Base64 to Blob
+        const res = await fetch(imageSrc);
+        const blob = await res.blob();
+        const file = new File([blob], `checkout-img-${Date.now()}.png`, { type: blob.type });
+
+        // Client-side Vercel Blob Upload (bypasses 4.5MB Serverless limit)
+        const newBlob = await upload(file.name, file, {
+          access: 'public',
+          handleUploadUrl: '/api/upload-token', // We will create this secure route next
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Image upload failed');
-        return data.url;
+
+        return newBlob.url;
       };
 
       const checkoutItems = await Promise.all(cart.map(async (item) => {
