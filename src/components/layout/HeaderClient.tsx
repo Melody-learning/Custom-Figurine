@@ -24,7 +24,7 @@ export function HeaderClient({ user }: HeaderClientProps) {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
 
-  const t = (key: string): string => translate(key) as string;
+  const t = (key: string): string => translate(key as Parameters<typeof translate>[0]) as string;
 
   const themes = Object.keys(themeConfig) as Theme[];
 
