@@ -3,6 +3,9 @@
 const domain = process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN!;
 const storefrontAccessToken = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN!;
 const adminAccessToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN!;
+// Dev Dashboard App Credentials (Client ID and Secret)
+const adminApiKey = process.env.SHOPIFY_ADMIN_API_KEY;
+const adminApiSecret = process.env.SHOPIFY_ADMIN_API_SECRET;
 
 const storefrontEndpoint = `https://${domain}/api/2024-01/graphql.json`;
 const adminEndpoint = `https://${domain}/admin/api/2024-01/graphql.json`;
@@ -50,12 +53,23 @@ export async function adminShopifyFetch<T>({
   query: string;
   variables?: Record<string, unknown>;
 }): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  // Support both Admin Access Token (shpat_) and Dev Dashboard API Key + Secret (shpss_)
+  if (adminApiKey && adminApiSecret) {
+    const credentials = Buffer.from(`${adminApiKey}:${adminApiSecret}`).toString('base64');
+    headers['Authorization'] = `Basic ${credentials}`;
+  } else if (adminAccessToken) {
+    headers['X-Shopify-Access-Token'] = adminAccessToken;
+  } else {
+    throw new Error('Missing Shopify Admin API credentials in Vercel. Provide either SHOPIFY_ADMIN_API_KEY & SECRET or SHOPIFY_ADMIN_ACCESS_TOKEN.');
+  }
+
   const response = await fetch(adminEndpoint, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Shopify-Access-Token': adminAccessToken,
-    },
+    headers,
     body: JSON.stringify({ query, variables }),
     cache: 'no-store',
   });
