@@ -28,3 +28,14 @@
 ## 5. 结账路由锚点 (`/checkout`)
 - **功能归属**: 不在本项目内部域内进行实体 DOM 的渲染。
 - **逻辑**: 作为逻辑中转站（Redirect Router）。组装好当前购物车的所有定制及附加费用 Payload 后，重定向抛转至独立的 Shopify Hosted Web Checkout URL。
+
+## 6. [NEW] 个人中心 (`/profile`)
+- **受保护状态**: 严格受 `NextAuth.js` 中间件保护，未登录访客强制跌落至 `/login`。
+- **功能定位**: 用户私域数字资产与真实物理订单的保险箱。
+- **展示板块**:
+  1. **资产墙 (Asset Vault)**: 瀑布流展示本账号历史上成功通过 AI 生成的 3D 渲染成果（对接 Vercel Postgres `GeneratedAssets` 表）。
+  2. **物流轨迹 (Order Tracking)**: 对接 Shopify Webhook 回拨的数据流，实时展示订单履行状态。
+
+## 7. [NEW] 站长仪盘表 (`/admin`)
+- **极度机密**: 独立受限路由组 (`(admin)` layout)，依靠 Session 中的 `Role === 'ADMIN'` 执行访问控制。
+- **功能定位**: 作为脱离 Shopify 庞大身躯后的轻量级、针对生图消耗与特定订单观测的自定义看板。

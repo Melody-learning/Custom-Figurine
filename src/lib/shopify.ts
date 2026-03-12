@@ -173,7 +173,8 @@ export interface Product {
 
 // 创建结账（底层改为使用 Admin API 生成带图片的 Draft Order 发票）
 export async function createCheckout(
-  items: Array<{ variantId: string; quantity: number; customAttributes?: Array<{ key: string; value: string }> }>
+  items: Array<{ variantId: string; quantity: number; customAttributes?: Array<{ key: string; value: string }> }>,
+  userId?: string
 ) {
   // Build the Draft Order using standard Variant IDs 
   // This ensures the predefined catalog image from Shopify is used on the Checkout page, avoiding a gray placeholder.
@@ -211,6 +212,11 @@ export async function createCheckout(
     return lineItemInput;
   });
 
+  const customAttributes = [];
+  if (userId) {
+    customAttributes.push({ key: "userId", value: userId });
+  }
+
   const data = await adminShopifyFetch<{
     draftOrderCreate: {
       draftOrder: {
@@ -224,6 +230,7 @@ export async function createCheckout(
     variables: {
       input: {
         lineItems: cleanItems,
+        customAttributes: customAttributes,
         tags: ["custom-figurine", "api-generated-draft"],
         note: "Checkout generated from frontend custom figurine app."
       },

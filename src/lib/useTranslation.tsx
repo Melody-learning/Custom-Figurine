@@ -36,7 +36,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   // 防止 SSR 水合不匹配
   if (!mounted) {
     return (
-      <I18nContext.Provider value={{ language: 'en', setLanguage: () => {}, t: (k) => k as string }}>
+      <I18nContext.Provider value={{ language: 'en', setLanguage: () => {}, t: (k) => k as unknown as string }}>
         {children}
       </I18nContext.Provider>
     );

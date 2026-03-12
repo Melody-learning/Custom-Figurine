@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createCheckout } from '@/lib/shopify';
+import { auth } from '@/auth';
 
 export async function POST(request: Request) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id;
+
     const body = await request.json();
     const { items } = body;
 
@@ -13,11 +17,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Call Shopify API to create checkout
-    const checkout = await createCheckout(items);
+    // Call Shopify API to create checkout with current userId (if logged in)
+    const checkout = await createCheckout(items, userId);
 
     return NextResponse.json({ url: checkout.webUrl });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API Checkout Error:', error);
     return NextResponse.json(
       { 
