@@ -27,7 +27,7 @@
 ---
 ## 状态区
 - [x] 提出中 (Draft)
-- [ ] 等待用户审查并批复 Proposal (Pending User Approval)
-- [ ] 修改并合入规范 Specs (Specs Updated)
-- [ ] 物理代码实施完成 (Implemented)
-- [ ] 完成闭环 (Done)
+- [x] 等待用户审查并批复 Proposal (Pending User Approval)
+- [x] 修改并合入规范 Specs (Specs Updated)
+- [x] 物理代码实施完成 (Implemented)
+- [x] 完成闭环 (Done)
