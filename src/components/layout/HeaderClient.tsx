@@ -14,6 +14,7 @@ interface HeaderClientProps {
     name?: string | null;
     email?: string | null;
     image?: string | null;
+    hasWelcomeCoupon?: boolean | null;
   } | null;
 }
 
@@ -82,6 +83,25 @@ export function HeaderClient({ user }: HeaderClientProps) {
             <Globe className="h-4 w-4" />
             <span className="text-sm font-medium">{language.toUpperCase()}</span>
           </button>
+
+          {/* Active Coupon Badge */}
+          {user?.hasWelcomeCoupon && (
+            <button
+              onClick={() => setCartOpen(true)}
+              className="hidden sm:flex relative items-center gap-1.5 px-3 py-1.5 rounded-full transition-all group overflow-hidden border"
+              style={{
+                backgroundColor: `${config.colors.accent}15`,
+                borderColor: `${config.colors.accent}40`,
+                color: config.colors.accent
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 dark:via-black/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+              <span className="text-xs font-bold flex items-center gap-1.5 z-10" style={{ color: config.colors.accent }}>
+                <div className="w-1.5 h-1.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: config.colors.accent }} />
+                10% OFF
+              </span>
+            </button>
+          )}
 
           {/* Cart */}
           <button

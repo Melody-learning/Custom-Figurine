@@ -22,7 +22,19 @@
   --animate-blink: blink 1s step-end infinite;
   --animate-reveal-up: reveal-up 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   --animate-marquee: marquee 20s linear infinite;
+  --animate-bg-spin: bg-spin 3s linear infinite;
   
+  @keyframes bg-spin {
+    to {
+      --tw-translate-x: 0;
+      --tw-translate-y: 0;
+      --tw-rotate: 360deg;
+      --tw-skew-x: 0;
+      --tw-skew-y: 0;
+      transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+    }
+  }
+
   @keyframes float {
     0% { transform: translateY(0px); }
     50% { transform: translateY(-20px); }

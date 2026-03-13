@@ -44,3 +44,9 @@
   - **[核心体验] 全局 Toast 提示流 (Global Toast Flow)**：发信成功后，为了最快速地释放用户的屏幕焦点并允许继续浏览，弹窗应当**立刻关闭**。不进行任何形式的跳转或原地重绘，而是静默调用 `toast.success` 显示长达 6 秒的全局通知。全局化的提示组件更统一、不打扰用户浏览。
   - **[解耦业务] 优惠券本地派发**: 弹窗在发信成功的同时，会静默地向 `localStorage` 中写入 `active_discount_code = "WELCOME10"`。`CartSidebar` 会全局监听该值并自动给全车商品九折呈现，并最终挂载到 Shopify Checkout 请求上。
   - **[坑点预警] 弹窗防闪烁安全线**: 在编写此类的自动开启弹窗时，由于 React 开发模式的 Strict Mode 会触发两次 `useEffect` 挂载，如果不在 `setTimeout` **前**和**内**同时加入 `localStorage.getItem` 阻断器，会导致闭包作用域泄露，引发多个弹窗堆叠或关不掉的 Bug。所有类似弹窗必须实施此类极致的 `localStorage` 同步拦截。
+
+### 4.2 登入后交互体验增强 (Post-Login UX)
+为了解决用户通过邮件重定向回原始页面后感知太弱的问题，并提高转化率：
+- **[迎宾 Toast] Session Welcome Toast**: 必须通过前端的 `Session` 监听结合浏览器临时的 `sessionStorage` 拦截。当访客拥有 Session 且是当前 Tab 生命周期内的“首次登入”时，在左下角爆发 `toast.success` 以告知用户资产状态。
+- **[促单挂件] Global Header Coupon Badge**: 在全站右上方 Header (购物车旁边) ，当 `session.user.hasWelcomeCoupon === true` 时需常亮展示一个药丸徽章。要求带发光呼吸效，点击直接弹出 `CartSidebar`。
+- **[全息卡片] Dynamic Profile Card**: 个人中心的卡包UI严禁使用纯静态块。必须依托 `framer-motion` (例如 `whileHover={{ scale: 1.02, rotateY: 5 }}`)，加入 CSS 的 `radial-gradient` 鼠标追踪光晕，甚至一键点击复制 (`navigator.clipboard.writeText`) 动作，打造高级数字资产感。

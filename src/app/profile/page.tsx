@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { PackageOpen, Sparkles, LogOut, Loader2 } from "lucide-react";
 import { logoutUser } from "@/app/actions/auth";
 import type { GeneratedAsset, StoreOrder } from "@prisma/client";
+import { DynamicCouponCard } from "@/components/marketing/DynamicCouponCard";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -70,42 +71,7 @@ export default async function ProfilePage() {
 
         {/* Coupon Asset Wall */}
         {(session.user as any).hasWelcomeCoupon && (
-          <div className="relative overflow-hidden rounded-3xl p-8 sm:p-10 bg-[var(--surface-sunken)] border border-[var(--border-subtle)]/50 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 group">
-             {/* Glow effect */}
-             <div className="absolute inset-0 bg-gradient-to-r from-[var(--brand-primary)]/10 via-purple-500/10 to-transparent pointer-events-none" />
-             <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-purple-500/30 transition-colors duration-700" />
-             
-             <div className="relative z-10 flex items-center gap-6">
-                <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--brand-primary)] to-purple-600 flex items-center justify-center shadow-lg shadow-[var(--brand-primary)]/20">
-                   <span className="text-3xl">🎁</span>
-                </div>
-                <div>
-                   <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] mb-1">
-                      10% Welcome Discount
-                   </h2>
-                   <p className="text-[var(--text-secondary)] text-sm sm:text-base">
-                      Your exclusive offer is active. It will auto-apply safely at checkout.
-                   </p>
-                </div>
-             </div>
-
-             <div className="relative z-10 flex-shrink-0 w-full md:w-auto">
-                <div className="px-6 py-4 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md flex items-center justify-center gap-4">
-                   <div className="flex flex-col">
-                      <span className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider font-semibold mb-1">Code</span>
-                      <span className="text-xl font-mono font-bold text-[var(--brand-primary)] tracking-widest text-center">WELCOME10</span>
-                   </div>
-                   <div className="h-10 w-px bg-white/10 hidden sm:block"></div>
-                   <div className="hidden sm:flex flex-col">
-                      <span className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider font-semibold mb-1">Status</span>
-                      <span className="text-sm font-bold text-green-400 flex items-center gap-1">
-                         <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></div>
-                         Active
-                      </span>
-                   </div>
-                </div>
-             </div>
-          </div>
+          <DynamicCouponCard />
         )}
 
         {/* Dashboards Grid */}
