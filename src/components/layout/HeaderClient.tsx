@@ -88,14 +88,14 @@ export function HeaderClient({ user }: HeaderClientProps) {
           {user?.hasWelcomeCoupon && (
             <Link
               href="/profile"
-              className="hidden sm:flex relative items-center gap-1.5 px-3 py-1.5 rounded-full transition-transform hover:scale-105 group overflow-hidden shadow-md"
+              className="hidden sm:flex relative items-center gap-1.5 px-3 py-1.5 rounded-full transition-transform hover:scale-105 group overflow-hidden"
               style={{
                 backgroundColor: config.colors.accent,
                 color: '#ffffff'
               }}
             >
               <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_30%,rgba(255,255,255,0.9)_50%,transparent_70%)] mix-blend-overlay -translate-x-full animate-[shimmer_4s_infinite]" />
-              <span className="text-xs font-black tracking-wide flex items-center gap-1.5 z-10 drop-shadow-md">
+              <span className="text-xs font-black tracking-wide flex items-center gap-1.5 z-10">
                 <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
                 10% OFF
               </span>
