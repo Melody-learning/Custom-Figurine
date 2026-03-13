@@ -3,8 +3,10 @@
 import { signIn, signOut } from "@/auth";
 import { AuthError } from "next-auth";
 
-export async function loginWithGoogle() {
-  await signIn("google", { redirectTo: "/profile" });
+export async function loginWithGoogle(formData?: FormData) {
+  const cb = formData?.get("callbackUrl") as string;
+  const redirectTo = cb && !cb.includes("/login") ? cb : "/profile";
+  await signIn("google", { redirectTo });
 }
 
 import prisma from "@/lib/prisma";

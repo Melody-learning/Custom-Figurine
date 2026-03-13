@@ -5,13 +5,22 @@ import { Mail, ArrowRight, ShieldCheck, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [callbackUrl, setCallbackUrl] = useState("/profile");
   const router = useRouter();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cb = params.get("callbackUrl");
+    if (cb && !cb.includes("/login")) {
+      setCallbackUrl(cb);
+    }
+  }, []);
 
   async function handleEmailLogin(formData: FormData) {
     setIsLoading(true);
@@ -82,6 +91,7 @@ export default function LoginPage() {
             <div className="space-y-4">
               {/* Google Auth Button */}
               <form action={loginWithGoogle}>
+                <input type="hidden" name="callbackUrl" value={callbackUrl} />
                 <button 
                   type="submit"
                   className="w-full relative flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-sunken)] hover:bg-[var(--surface-raised)] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[var(--brand-primary)]/10 active:scale-95 active:translate-y-0 transition-all duration-300 cursor-pointer group"

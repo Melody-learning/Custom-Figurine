@@ -12,11 +12,12 @@ export function SessionToastProvider({ children }: { children: React.ReactNode }
     // Only proceed if user just successfully authenticated
     if (status === "authenticated" && session?.user) {
       
+      // Check if this is the very first time they are logging in on this device
+      const hasCelebrated = localStorage.getItem("has_ever_celebrated_login");
       // Use sessionStorage so the toast only fires ONCE per browser tab session
-      // This prevents the toast from firing every time they hard-refresh the page
-      const hasWelcomed = sessionStorage.getItem("has_welcomed");
+      const hasWelcomedThisSession = sessionStorage.getItem("has_welcomed_this_session");
       
-      if (!hasWelcomed) {
+      if (!hasWelcomedThisSession) {
         // Fire the celebratory Toast on the top center/right near the coupon
         toast("Welcome Back, Creator!", {
           description: (session.user as any).hasWelcomeCoupon 
@@ -32,30 +33,33 @@ export function SessionToastProvider({ children }: { children: React.ReactNode }
           }
         });
         
-        // Trigger localized confetti coming from top-right corner
-        setTimeout(() => {
-           import("canvas-confetti").then((confetti) => {
-             confetti.default({
-               particleCount: 150,     // Denser particles
-               spread: 45,             // Tighter range
-               startVelocity: 25,      // Doesn't shoot as far
-               gravity: 1.2,           // Falls a bit faster
-               origin: { y: 0.15, x: 0.8 }, // Spawn right at the badge
-               colors: ['#FFeb3b', '#00f0ff', '#ff003c', '#00ff66'], // Brighter neon colors
-               disableForReducedMotion: true,
-               zIndex: 2000
+        // Only trigger confetti if it's their FIRST time ever on this device
+        if (!hasCelebrated) {
+          setTimeout(() => {
+             import("canvas-confetti").then((confetti) => {
+               confetti.default({
+                 particleCount: 40,      // Just a small pop
+                 spread: 30,             // Very tight spread
+                 startVelocity: 15,      // Weak explosion
+                 gravity: 1.2,
+                 origin: { y: 0.15, x: 0.8 }, 
+                 colors: ['#FFeb3b', '#00f0ff', '#ff003c', '#00ff66'], 
+                 disableForReducedMotion: true,
+                 zIndex: 2000
+               });
              });
-           });
-        }, 300);
+          }, 300);
+          localStorage.setItem("has_ever_celebrated_login", "true");
+        }
         
-        // Mark as welcomed
-        sessionStorage.setItem("has_welcomed", "true");
+        // Mark as welcomed for this session so we don't spam toasts on refresh
+        sessionStorage.setItem("has_welcomed_this_session", "true");
       }
     }
     
-    // Auto-clear the flag if they log out, so next login it fires again
+    // Auto-clear the session flag if they log out, so next login it fires the plain toast again
     if (status === "unauthenticated") {
-       sessionStorage.removeItem("has_welcomed");
+       sessionStorage.removeItem("has_welcomed_this_session");
     }
   }, [status, session]);
 
