@@ -17,8 +17,9 @@ export default function LoginPage() {
       if (result?.error) {
         toast.error(result.error);
       }
-    } catch (err) {
-      toast.error("An unexpected error occurred during login.");
+    } catch (err: any) {
+      console.error("Raw login error:", err);
+      toast.error(err?.message || "An unexpected error occurred during login.");
     } finally {
       setIsLoading(false);
     }
