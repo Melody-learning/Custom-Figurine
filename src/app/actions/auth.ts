@@ -7,12 +7,28 @@ export async function loginWithGoogle() {
   await signIn("google", { redirectTo: "/profile" });
 }
 
+import prisma from "@/lib/prisma";
+
 export async function loginWithEmail(formData: FormData) {
   const email = formData.get("email") as string;
+  const isWelcomeModal = formData.get("isWelcomeModal") === "true";
+  const callbackUrl = formData.get("callbackUrl") as string || "/profile";
+  
   if (!email) return { error: "Email is required" };
 
   try {
-    const res = await signIn("resend", { email, redirect: false, redirectTo: "/profile" });
+    if (isWelcomeModal) {
+      // Server-driven architecture: aggressively grant the welcome coupon here.
+      // NextAuth Prisma adapter operates on email. If it doesn't exist, we pre-create it.
+      const existingUser = await prisma.user.findUnique({ where: { email } });
+      if (existingUser) {
+        await prisma.user.update({ where: { email }, data: { hasWelcomeCoupon: true } });
+      } else {
+        await prisma.user.create({ data: { email, hasWelcomeCoupon: true } });
+      }
+    }
+
+    const res = await signIn("resend", { email, redirect: false, redirectTo: callbackUrl });
     if (res?.error) {
       return { error: `Auth Provider Error: ${res.error}` };
     }

@@ -12,6 +12,7 @@
 ### 2.1 用户池落子 (Authentication Realm)
 完全依附且兼容于 Auth.js 官方要求的适配层关系模型：
 - **`User`** 表: 挂载核心业务 `role` (`USER` / `ADMIN`) 以及诸如 Shopify Customer ID (如有) 的远端联合句柄。
+  - **核心资产标记**: `hasWelcomeCoupon`。解决跨端发券被刷的安全重器。当新用户或者营销引流弹窗触发时，我们在数据库锁死改状态，彻底摒弃前端 `localStorage`。
 - **`Account` / `Session` / `VerificationToken`**: 用于保障 OAuth / Magic Link 登录流程的安全流转。
 
 ### 2.2 定制资产管理 (The Payload Realm)

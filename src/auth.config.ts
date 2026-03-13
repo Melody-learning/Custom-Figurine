@@ -16,6 +16,7 @@ export default {
       if (user) {
         token.role = (user as { role?: string }).role || "USER";
         token.id = user.id;
+        token.hasWelcomeCoupon = (user as { hasWelcomeCoupon?: boolean }).hasWelcomeCoupon || false;
       }
       return token;
     },
@@ -23,6 +24,7 @@ export default {
       if (token && session.user) {
         (session.user as { role?: unknown }).role = token.role;
         (session.user as { id?: unknown }).id = token.id;
+        (session.user as { hasWelcomeCoupon?: unknown }).hasWelcomeCoupon = token.hasWelcomeCoupon;
       }
       return session;
     },

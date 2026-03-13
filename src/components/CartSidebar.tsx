@@ -6,23 +6,18 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
 import { upload } from '@vercel/blob/client';
+import { useSession } from 'next-auth/react';
 
 export function CartSidebar() {
   const { cart, isCartOpen, setCartOpen, removeFromCart, updateQuantity } = useStore();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [discountCode, setDiscountCode] = useState<string | null>(null);
   const { t: translate } = useTranslation();
   const { config, theme } = useThemeConfig();
+  const { data: session } = useSession();
 
-  // On cart open, sync active discount code from localStorage
-  useEffect(() => {
-    if (isCartOpen) {
-      const activeCode = localStorage.getItem('active_discount_code');
-      if (activeCode) {
-        setDiscountCode(activeCode);
-      }
-    }
-  }, [isCartOpen]);
+  // Dynamically grant the discount if the backend user model has the coupon
+  const hasWelcomeCoupon = session?.user?.hasWelcomeCoupon === true;
+  const discountCode = hasWelcomeCoupon ? 'WELCOME10' : null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const t = (key: any): string => {
