@@ -25,20 +25,28 @@ export function SessionToastProvider({ children }: { children: React.ReactNode }
           icon: <Sparkles className="w-5 h-5 text-purple-500" />,
           duration: 6000,
           position: "top-right",
+          style: {
+            marginTop: '4rem', // Push it down below the Header
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(12px)',
+          }
         });
         
         // Trigger localized confetti coming from top-right corner
         setTimeout(() => {
            import("canvas-confetti").then((confetti) => {
              confetti.default({
-               particleCount: 120,
-               spread: 80,
-               origin: { y: 0.1, x: 0.8 },
-               colors: ['#a855f7', '#ec4899', '#3b82f6'],
-               disableForReducedMotion: true
+               particleCount: 150,     // Denser particles
+               spread: 45,             // Tighter range
+               startVelocity: 25,      // Doesn't shoot as far
+               gravity: 1.2,           // Falls a bit faster
+               origin: { y: 0.15, x: 0.8 }, // Spawn right at the badge
+               colors: ['#FFeb3b', '#00f0ff', '#ff003c', '#00ff66'], // Brighter neon colors
+               disableForReducedMotion: true,
+               zIndex: 2000
              });
            });
-        }, 100);
+        }, 300);
         
         // Mark as welcomed
         sessionStorage.setItem("has_welcomed", "true");
