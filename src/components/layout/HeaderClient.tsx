@@ -103,14 +103,28 @@ export function HeaderClient({ user }: HeaderClientProps) {
           {/* User Profile / Login */}
           <div className="pl-4 ml-2 border-l border-black/10 dark:border-white/10 flex items-center">
              {user ? (
-               <Link href="/profile" className="relative w-8 h-8 rounded-full overflow-hidden hover:ring-2 hover:ring-[var(--brand-primary)] transition-all">
-                  <Image 
-                     src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.name}`} 
-                     alt="Profile" 
-                     fill 
-                     className="object-cover"
-                  />
-               </Link>
+               (() => {
+                  const fallbackName = user.name || user.email?.split('@')[0] || "U";
+                  const initial = fallbackName.charAt(0).toUpperCase();
+                  const hasImage = !!user.image;
+                  
+                  return (
+                    <Link href="/profile" className="relative w-8 h-8 rounded-full overflow-hidden hover:ring-2 hover:ring-[var(--brand-primary)] transition-all">
+                       {hasImage ? (
+                         <Image 
+                            src={user.image!} 
+                            alt="Profile" 
+                            fill 
+                            className="object-cover"
+                         />
+                       ) : (
+                         <div className="w-full h-full bg-gradient-to-br from-[var(--brand-primary)] to-purple-600 flex items-center justify-center text-sm font-bold text-white shadow-inner">
+                           {initial}
+                         </div>
+                       )}
+                    </Link>
+                  );
+               })()
              ) : (
                <Link href="/login" className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full border hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: config.colors.border, color: config.colors.text }}>
                   <UserCircle2 className="w-4 h-4" />

@@ -10,7 +10,7 @@ export async function loginWithEmail(formData: FormData) {
   const email = formData.get("email") as string;
   if (!email) return;
 
-  await signIn("nodemailer", { email, redirectTo: "/profile" });
+  await signIn("resend", { email, redirectTo: "/profile" });
 }
 
 export async function logoutUser() {

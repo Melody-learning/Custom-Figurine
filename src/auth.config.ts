@@ -29,5 +29,6 @@ export default {
   },
   pages: {
     signIn: '/login',
+    verifyRequest: '/login/verify-request', // Overrides the default "check your email" page
   }
 } satisfies NextAuthConfig;

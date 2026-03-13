@@ -28,6 +28,11 @@ export default async function ProfilePage() {
     orderBy: { createdAt: 'desc' },
   });
 
+  // Computations for Avatar and Name Fallback
+  const fallbackName = session.user.name || session.user.email?.split('@')[0] || "Creator";
+  const initial = fallbackName.charAt(0).toUpperCase();
+  const hasImage = !!session.user.image;
+
   return (
     <div className="min-h-screen bg-[var(--background)] pt-24 pb-12 px-6">
       <div className="max-w-7xl mx-auto space-y-12">
@@ -35,16 +40,23 @@ export default async function ProfilePage() {
         {/* Profile Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-8 border-b border-[var(--border-subtle)]">
           <div className="flex items-center gap-6">
-             <div className="relative w-20 h-20 rounded-full overflow-hidden bg-[var(--surface-sunken)] ring-2 ring-[var(--brand-primary)] p-1">
-                <Image 
-                  src={session.user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${session.user.name}`} 
-                  alt="Avatar" 
-                  fill 
-                  className="rounded-full object-cover" 
-                />
-             </div>
+             {hasImage ? (
+                <div className="relative w-20 h-20 rounded-full overflow-hidden bg-[var(--surface-sunken)] ring-2 ring-[var(--brand-primary)] p-1">
+                  <Image 
+                    src={session.user.image!} 
+                    alt="Avatar" 
+                    fill 
+                    className="rounded-full object-cover" 
+                  />
+                </div>
+             ) : (
+                <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-purple-600 flex items-center justify-center text-3xl font-bold text-white shadow-lg ring-2 ring-[var(--brand-primary)] ring-offset-2 ring-offset-[var(--background)]">
+                  {initial}
+                </div>
+             )}
+             
              <div>
-                <h1 className="text-3xl font-bold text-[var(--text-primary)]">{session.user.name || "Creator"}</h1>
+                <h1 className="text-3xl font-bold text-[var(--text-primary)]">{fallbackName}</h1>
                 <p className="text-[var(--text-secondary)]">{session.user.email}</p>
              </div>
           </div>
