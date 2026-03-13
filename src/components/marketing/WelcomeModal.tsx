@@ -92,12 +92,12 @@ export function WelcomeModal() {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-4xl overflow-hidden rounded-3xl bg-[var(--surface-sunken)] border border-white/10 shadow-2xl flex flex-col md:flex-row z-10"
+            className="relative w-full max-w-4xl overflow-hidden rounded-3xl bg-white dark:bg-zinc-950 border border-black/10 dark:border-white/10 shadow-2xl flex flex-col md:flex-row z-10"
           >
             {/* Close Button */}
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/20 text-white/70 hover:text-white hover:bg-black/40 transition-colors backdrop-blur-md"
+              className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/20 text-white/70 hover:text-white hover:bg-black/40 transition-colors backdrop-blur-md cursor-pointer"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -105,11 +105,10 @@ export function WelcomeModal() {
 
             {/* Left Side: Image */}
             <div className="relative w-full md:w-5/12 h-48 md:h-auto overflow-hidden bg-black">
-              <Image
+              <img
                 src="/images/after.jpg"
                 alt="Custom 3D Figurine"
-                fill
-                className="object-cover opacity-90"
+                className="w-full h-full object-cover opacity-90"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent md:bg-gradient-to-r" />
               <div className="absolute bottom-6 left-6 right-6">

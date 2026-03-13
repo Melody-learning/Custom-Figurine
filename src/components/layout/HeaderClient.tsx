@@ -48,7 +48,7 @@ export function HeaderClient({ user }: HeaderClientProps) {
           <div className="relative">
             <button
               onClick={() => setShowThemeMenu(!showThemeMenu)}
-              className="flex items-center gap-1 rounded-lg p-2 hover:opacity-70 transition-opacity"
+              className="flex items-center gap-1 rounded-lg p-2 hover:opacity-70 transition-opacity cursor-pointer"
               style={{ color: config.colors.text }}
             >
               <Palette className="h-4 w-4" />
@@ -62,7 +62,7 @@ export function HeaderClient({ user }: HeaderClientProps) {
                       setTheme(t);
                       setShowThemeMenu(false);
                     }}
-                    className={`w-full px-4 py-3 text-left text-sm hover:opacity-70 transition-opacity ${
+                    className={`w-full px-4 py-3 text-left text-sm hover:opacity-70 transition-opacity cursor-pointer ${
                       theme === t ? 'font-bold' : ''
                     }`}
                     style={{ color: theme === t ? config.colors.primary : config.colors.text, backgroundColor: theme === t ? config.colors.backgroundAlt : 'transparent' }}
@@ -77,7 +77,7 @@ export function HeaderClient({ user }: HeaderClientProps) {
           {/* Language Switcher */}
           <button
             onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
-            className="flex items-center gap-1 rounded-lg p-2 hover:opacity-70 transition-opacity"
+            className="flex items-center gap-1 rounded-lg p-2 hover:opacity-70 transition-opacity cursor-pointer"
             style={{ color: config.colors.text }}
           >
             <Globe className="h-4 w-4" />
@@ -107,7 +107,7 @@ export function HeaderClient({ user }: HeaderClientProps) {
           {/* Cart */}
           <button
             onClick={() => setCartOpen(true)}
-            className="relative flex items-center gap-2 text-sm font-medium hover:opacity-70 transition-opacity"
+            className="relative flex items-center gap-2 text-sm font-medium hover:opacity-70 transition-opacity cursor-pointer"
             style={{ color: config.colors.text }}
           >
             <ShoppingCart className="h-5 w-5" />

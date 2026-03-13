@@ -62,7 +62,7 @@ export default async function ProfilePage() {
              </div>
           </div>
           <form action={logoutUser}>
-             <button type="submit" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-subtle)] hover:border-red-500/50 hover:text-red-500 text-[var(--text-secondary)] font-medium transition-colors text-sm">
+             <button type="submit" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-subtle)] hover:border-red-500/50 hover:text-red-500 text-[var(--text-secondary)] font-medium transition-colors text-sm cursor-pointer">
                 <LogOut className="w-4 h-4" />
                 Sign Out
              </button>

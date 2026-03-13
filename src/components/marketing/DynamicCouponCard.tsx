@@ -47,7 +47,7 @@ export function DynamicCouponCard() {
       <div className="relative z-10 flex-shrink-0 w-full md:w-auto">
         <div 
            onClick={handleCopy}
-           className="px-6 py-4 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md flex items-center justify-between xl:justify-center gap-4 hover:bg-black/60 transition-colors cursor-copy active:scale-95"
+           className="px-6 py-4 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md flex items-center justify-between xl:justify-center gap-4 hover:bg-black/60 transition-colors cursor-pointer active:scale-95"
         >
           <div className="flex flex-col items-start xl:items-center">
             <span className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider font-semibold mb-1">Interactive Code</span>

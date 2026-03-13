@@ -18,29 +18,31 @@ export function SessionToastProvider({ children }: { children: React.ReactNode }
       const hasWelcomedThisSession = sessionStorage.getItem("has_welcomed_this_session");
       
       if (!hasWelcomedThisSession) {
-        // Fire the celebratory Toast on the top center/right near the coupon
-        toast("Welcome Back, Creator!", {
-          description: (session.user as any).hasWelcomeCoupon 
-            ? "Your 10% Welcome Discount is active and ready to use." 
-            : "Your portal is unlocked. Ready to shape some masterpieces?",
-          icon: <Sparkles className="w-5 h-5 text-purple-500" />,
-          duration: 6000,
-          position: "top-right",
-          style: {
-            marginTop: '4rem', // Push it down below the Header
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(12px)',
-          }
-        });
         
-        // Only trigger confetti if it's their FIRST time ever on this device
+        // Very first login ever on this device
         if (!hasCelebrated) {
+          toast("Welcome, Creator! 🎉", {
+            description: (session.user as any).hasWelcomeCoupon 
+              ? "Your 10% Welcome discount is now active!" 
+              : "Your portal is unlocked.",
+            icon: <Sparkles className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />,
+            duration: 6000,
+            position: "top-right",
+            className: "font-sans", // Force inheriting Next.js global font
+            style: {
+              marginTop: '4rem',
+              border: '1px solid rgba(150, 150, 150, 0.2)',
+              backdropFilter: 'blur(12px)',
+              background: 'var(--surface-sunken, rgba(255,255,255,0.9))'
+            }
+          });
+          
           setTimeout(() => {
              import("canvas-confetti").then((confetti) => {
                confetti.default({
-                 particleCount: 40,      // Just a small pop
-                 spread: 30,             // Very tight spread
-                 startVelocity: 15,      // Weak explosion
+                 particleCount: 40,
+                 spread: 30,
+                 startVelocity: 15,
                  gravity: 1.2,
                  origin: { y: 0.15, x: 0.8 }, 
                  colors: ['#FFeb3b', '#00f0ff', '#ff003c', '#00ff66'], 
@@ -50,6 +52,16 @@ export function SessionToastProvider({ children }: { children: React.ReactNode }
              });
           }, 300);
           localStorage.setItem("has_ever_celebrated_login", "true");
+        } else {
+          // Normal, subsequent logins (No confetti, simple text)
+          toast.success("Welcome back!", {
+            duration: 3000,
+            position: "top-right",
+            className: "font-sans",
+            style: {
+              marginTop: '4rem'
+            }
+          });
         }
         
         // Mark as welcomed for this session so we don't spam toasts on refresh
