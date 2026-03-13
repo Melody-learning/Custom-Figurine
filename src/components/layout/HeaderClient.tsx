@@ -88,15 +88,18 @@ export function HeaderClient({ user }: HeaderClientProps) {
           {user?.hasWelcomeCoupon && (
             <Link
               href="/profile"
-              className="hidden sm:flex relative items-center gap-1.5 px-3 py-1.5 rounded-full transition-transform hover:scale-105 group overflow-hidden"
+              className="hidden sm:flex relative items-center gap-1.5 px-3 py-1.5 rounded-full transition-opacity hover:opacity-70 group overflow-hidden border"
               style={{
-                backgroundColor: config.colors.accent,
-                color: '#ffffff'
+                borderColor: config.colors.border,
+                color: config.colors.text
               }}
             >
-              <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_30%,rgba(255,255,255,0.7)_50%,transparent_70%)] mix-blend-plus-lighter -translate-x-full animate-[shimmer_4s_infinite]" />
-              <span className="text-xs font-black tracking-wide flex items-center gap-1.5 z-10">
-                <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-white" />
+              <div 
+                className="absolute inset-0 bg-[linear-gradient(115deg,transparent_30%,currentColor_50%,transparent_70%)] opacity-20 -translate-x-full animate-[shimmer_4s_infinite]" 
+                style={{ color: config.colors.accent }}
+              />
+              <span className="text-xs font-bold tracking-wide flex items-center gap-1.5 z-10" style={{ color: config.colors.accent }}>
+                <div className="w-1.5 h-1.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: config.colors.accent }} />
                 10% OFF
               </span>
             </Link>
