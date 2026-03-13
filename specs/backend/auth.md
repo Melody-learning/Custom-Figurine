@@ -18,6 +18,10 @@
 ## 3. Session 与会话策略 (Session Strategy)
 - 采用 **JWT (JSON Web Token)** 策略。
 - 此策略能在 Vercel Edge Runtime (乃至中间件拦截器) 中极速解签，零冷启动延迟，无需每次路由切换请求中心数据库。
+- **[环境预警] 测试魔术链接策略**: 
+  - 本地测试 (`localhost:3000`) 触发的 Magic Link 邮件，若发往腾讯系邮箱 (QQ/WeChat) 或者部分开启了强校验的企业邮箱，**严禁直接点击邮件中的登录按钮**。
+  - 这是由于 `xmsafejump` 等邮件防刷引擎会在外网校验该 URL 的有效性，而公网无法解析 `localhost:3000`，会直接阻断跳转并抛出 `{"head":{"ret":-5002,"cgi":"xmspamchecklogicsvr/xmsafejump"...}}` 报错。
+  - 开发者必须**右键按钮复制纯文本链接**贴回浏览器完成测试，或直接在线上域名环境中测试。
 
 ## 4. 路由防御中间件及系统重定向 (Route Protection & Redirects)
 由 `middleware.ts` / `auth.config.ts` 强力接管，以下路由矩阵受到读写拦截和改写：

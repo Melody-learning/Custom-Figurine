@@ -31,3 +31,15 @@
 - **定位**: 必须挂载在屏幕左下方 (bottom-left)，这是为了拟合开发者本地终端/错误控制台经常出现的位置，符合心理模型。
 - **主题风格**: 强制开启 `richColors` 与 `theme="dark"` (或跟随系统深色主题)，保证深色模式下的流光极简质感。
 - **应用场景**: 用于所有 Server Component, Server Actions 以及 Client Component 中需要跳出边界，给予用户的**结果级非阻塞警告**（例如：API 密钥未配置、获取 3D 模型失败等线上静默报错）。
+
+## 4. 营销与引流组件 (Marketing Components)
+### 4.1 首访弹窗 (Welcome Login Modal)
+- **触发机制**: 针对未登录 (`session === null`) 且本地离线存储未打标查阅 (`welcome_modal_seen`) 的用户。在停留适当时间或页面离开意图 (Exit Intent) 时触发。
+- **视觉风格**:
+  - Backdrop: 采用大面积高斯模糊 `backdrop-blur-md` 和极低透明度的深色遮罩。
+  - Modal 本体: 左侧图文区展示高品质 3D 渲染产物；右侧为表单区，引导用户获取优惠（例如 10% Off）。
+  - 色彩: 使用 `brand-primary` 作为高亮行动号召 (CTA) 的底色，整体搭配 Glassmorphism (白纱透底 `bg-white/5` 等)。
+- **交互规范**:
+  - 由于我们是 Headless 架构，该弹窗右侧必须嵌入 `auth/server-action` 构建的 Magic Link （邮箱发信）表单。
+  - **[核心体验] 全局 Toast 提示流 (Global Toast Flow)**：发信成功后，为了最快速地释放用户的屏幕焦点并允许继续浏览，弹窗应当**立刻关闭**。不进行任何形式的跳转或原地重绘，而是静默调用 `toast.success` 显示长达 6 秒的全局通知。全局化的提示组件更统一、不打扰用户浏览。
+  - **[坑点预警] 弹窗防闪烁安全线**: 在编写此类的自动开启弹窗时，由于 React 开发模式的 Strict Mode 会触发两次 `useEffect` 挂载，如果不在 `setTimeout` **前**和**内**同时加入 `localStorage.getItem` 阻断器，会导致闭包作用域泄露，引发多个弹窗堆叠或关不掉的 Bug。所有类似弹窗必须实施此类极致的 `localStorage` 同步拦截。

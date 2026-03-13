@@ -6,6 +6,8 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CartSidebar } from "@/components/CartSidebar";
 import { Toaster } from "sonner";
+import { WelcomeModal } from "@/components/marketing/WelcomeModal";
+import { auth } from "@/auth";
 
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -15,11 +17,12 @@ export const metadata: Metadata = {
   description: "Upload your image and create custom 3D figurines",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
   return (
     <html lang="en" suppressHydrationWarning className={`${outfit.variable} ${inter.variable}`}>
       <body className="font-sans antialiased min-h-screen flex flex-col">
@@ -30,6 +33,7 @@ export default function RootLayout({
           </main>
           <Footer />
           <CartSidebar />
+          {!session && <WelcomeModal />}
         </Providers>
         <Toaster position="bottom-left" theme="dark" richColors />
       </body>
