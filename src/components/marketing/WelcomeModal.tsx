@@ -54,6 +54,9 @@ export function WelcomeModal() {
       if (result?.error) {
         toast.error(result.error);
       } else if (result?.url || result?.success) {
+        // Issue global discount coupon locally for the Cart System
+        localStorage.setItem("active_discount_code", "WELCOME10");
+        
         toast.success("Magic link sent! Please check your email to claim the offer.", {
           duration: 6000, // Show for 6 seconds
         });

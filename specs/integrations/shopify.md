@@ -33,6 +33,7 @@
 4. **绑定底层变体 (Variant ID)**：在这张草稿订单中，我们要严格传入商品原有的 `variantId`，而不是去重写名称或价格将其变成“自定义商品 (Custom Line Item)”。
    - **架构抉择渊源**：Shopify 的 Checkout 结账系统安全级别极高，且其商品图片 CDN 是异步处理的（上传后需 3-10 秒才能生成多尺寸预览）。如果我们为其动态生成隐身商品、或将其转为自定义商品，由于图片未完全拉取，结账页面的缩略图会强制退化成“灰色占位框”，严重影响用户结算转化率。
 5. **完美兼顾前端体验与后台发货**：通过绑定原本存在的 `variantId`，Shopify 的原生结账页面会瞬间且完美地显示店主在后台给该款式预先设置的精选高转化的商品图（如精美的白模渲染图）。而那张作为最终定制凭证的独一无二的云端图片 URL，则牢牢地跟随着 `customAttributes` 被打印在客户最终付款的订单详情（Invoice / Admin Order Page）里，供库房一键下载发货！
+6. **优惠券结算分离 (Checkout Discount Injection)**：既然使用 Draft Order 发票链接结账，无法像原生 Storefront 购物车那样使用 `discountCodes` 数组。我们的策略是：前端负责全局缓存和 UI 折扣渲染，最后在重定向浏览器时通过 `checkoutUrl + "?discount=CODE"` 网关透传。利用 Shopify 原生结账页的二次校验拦截过期或重复使用的优惠券，从而将风控权利完全保留在底层。
 
 ## 4. 后台配置与 PayPal 绑定指南 (Owner Setup Guide)
 由于建单强依赖真实的接口互通，需要项目所有者 (Owner) 在 Shopify 界面执行以下手动前置操作：

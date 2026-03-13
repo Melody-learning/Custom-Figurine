@@ -42,4 +42,5 @@
 - **交互规范**:
   - 由于我们是 Headless 架构，该弹窗右侧必须嵌入 `auth/server-action` 构建的 Magic Link （邮箱发信）表单。
   - **[核心体验] 全局 Toast 提示流 (Global Toast Flow)**：发信成功后，为了最快速地释放用户的屏幕焦点并允许继续浏览，弹窗应当**立刻关闭**。不进行任何形式的跳转或原地重绘，而是静默调用 `toast.success` 显示长达 6 秒的全局通知。全局化的提示组件更统一、不打扰用户浏览。
+  - **[解耦业务] 优惠券本地派发**: 弹窗在发信成功的同时，会静默地向 `localStorage` 中写入 `active_discount_code = "WELCOME10"`。`CartSidebar` 会全局监听该值并自动给全车商品九折呈现，并最终挂载到 Shopify Checkout 请求上。
   - **[坑点预警] 弹窗防闪烁安全线**: 在编写此类的自动开启弹窗时，由于 React 开发模式的 Strict Mode 会触发两次 `useEffect` 挂载，如果不在 `setTimeout` **前**和**内**同时加入 `localStorage.getItem` 阻断器，会导致闭包作用域泄露，引发多个弹窗堆叠或关不掉的 Bug。所有类似弹窗必须实施此类极致的 `localStorage` 同步拦截。

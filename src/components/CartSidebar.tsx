@@ -2,7 +2,7 @@
 
 import { X, Minus, Plus, Trash2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
 import { upload } from '@vercel/blob/client';
@@ -10,8 +10,19 @@ import { upload } from '@vercel/blob/client';
 export function CartSidebar() {
   const { cart, isCartOpen, setCartOpen, removeFromCart, updateQuantity } = useStore();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [discountCode, setDiscountCode] = useState<string | null>(null);
   const { t: translate } = useTranslation();
   const { config, theme } = useThemeConfig();
+
+  // On cart open, sync active discount code from localStorage
+  useEffect(() => {
+    if (isCartOpen) {
+      const activeCode = localStorage.getItem('active_discount_code');
+      if (activeCode) {
+        setDiscountCode(activeCode);
+      }
+    }
+  }, [isCartOpen]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const t = (key: any): string => {
@@ -22,6 +33,10 @@ export function CartSidebar() {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+
+  const discountRate = discountCode === 'WELCOME10' ? 0.1 : 0;
+  const discountAmount = total * discountRate;
+  const finalTotal = total - discountAmount;
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
@@ -74,7 +89,13 @@ export function CartSidebar() {
         throw new Error(data.details || data.error || 'Checkout API failed');
       }
       
-      window.location.href = data.url;
+      let finalUrl = data.url;
+      if (discountCode) {
+        // Shopify Native feature: append ?discount=CODE to draft order checkout URL to auto-apply it.
+        finalUrl += finalUrl.includes('?') ? `&discount=${discountCode}` : `?discount=${discountCode}`;
+      }
+      
+      window.location.href = finalUrl;
     } catch (error: any) {
       console.error('Checkout error:', error);
       alert(`${t('checkoutError')}: ${error.message || ''}`);
@@ -183,14 +204,28 @@ export function CartSidebar() {
           {/* 底部 */}
           {cart.length > 0 && (
             <div className="border-t p-4" style={{ borderColor: config.colors.border }}>
-              <div className="mb-4 flex items-center justify-between">
-                <span className="font-medium" style={{ color: config.colors.text }}>Total</span>
-                <span className="text-lg font-semibold" style={{ color: config.colors.primary }}>${total.toFixed(2)}</span>
+              <div className="mb-4 flex flex-col space-y-2">
+                <div className="flex items-center justify-between text-sm" style={{ color: config.colors.textMuted }}>
+                  <span>{t('Subtotal') || 'Subtotal'}</span>
+                  <span>${total.toFixed(2)}</span>
+                </div>
+                {discountCode && (
+                  <div className="flex items-center justify-between text-sm text-green-600 font-medium">
+                    <span className="flex items-center gap-1">
+                      Discount <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-[10px] break-all">{discountCode}</span>
+                    </span>
+                    <span>-${discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between font-medium pt-2 border-t" style={{ borderColor: config.colors.border, color: config.colors.text }}>
+                  <span>{t('Total') || 'Total'}</span>
+                  <span className="text-xl font-bold" style={{ color: config.colors.primary }}>${finalTotal.toFixed(2)}</span>
+                </div>
               </div>
               <button
                 onClick={handleCheckout}
                 disabled={isCheckingOut}
-                className={`w-full py-3 font-medium text-white disabled:opacity-50 ${buttonStyle}`}
+                className={`w-full py-3.5 font-bold text-white shadow-lg transition-all disabled:opacity-50 ${buttonStyle}`}
               >
                 {isCheckingOut ? t('processing') : t('checkout')}
               </button>
