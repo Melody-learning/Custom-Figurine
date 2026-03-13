@@ -193,27 +193,17 @@ export default function CustomizePage() {
   const handleAddToCart = () => {
     if (!selectedVariant) return;
 
-    try {
-      addToCart({
-        variantId: selectedVariant.id,
-        title: `Custom Figurine - ${selectedVariant.title}`,
-        price: selectedVariant.price,
-        quantity: 1,
-        image: uploadedImage || undefined,
-        customImage: uploadedImage || undefined,
-        generatedImage: generatedImage || undefined,
-      });
-    } catch (e) {
-      console.error("Cart Storage Error:", e);
-      if (e instanceof Error && e.name === 'QuotaExceededError') {
-        alert("Your cart storage is full due to large images. Please clear your cart or browser cache, then try again.");
-        // We might want to auto-clear the cart here, but alerting is safer for now.
-      }
-    } finally {
-      // ALWAYS open the cart sidebar, even if storage quota failed,
-      // so the user isn't stuck wondering why the button didn't work.
-      setCartOpen(true);
-    }
+    addToCart({
+      variantId: selectedVariant.id,
+      title: `Custom Figurine - ${selectedVariant.title}`,
+      price: selectedVariant.price,
+      quantity: 1,
+      image: uploadedImage || undefined,
+      customImage: uploadedImage || undefined,
+      generatedImage: generatedImage || undefined,
+    });
+
+    setCartOpen(true);
   };
 
   const product = products[0];
