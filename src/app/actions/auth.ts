@@ -4,20 +4,7 @@ import { signIn, signOut } from "@/auth";
 import { AuthError } from "next-auth";
 
 export async function loginWithGoogle() {
-  try {
-    await signIn("google", { redirectTo: "/profile" });
-  } catch (error) {
-    if (error && typeof error === 'object' && 'digest' in error) {
-      const digest = (error as { digest?: string }).digest;
-      if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
-        throw error;
-      }
-    }
-    if (error instanceof AuthError) {
-      throw error;
-    }
-    throw error;
-  }
+  await signIn("google", { redirectTo: "/profile" });
 }
 
 export async function loginWithEmail(formData: FormData) {
@@ -53,15 +40,5 @@ export async function loginWithEmail(formData: FormData) {
 }
 
 export async function logoutUser() {
-  try {
-    await signOut({ redirectTo: "/login" });
-  } catch (error) {
-    if (error && typeof error === 'object' && 'digest' in error) {
-      const digest = (error as { digest?: string }).digest;
-      if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
-        throw error;
-      }
-    }
-    throw error;
-  }
+  await signOut({ redirectTo: "/login" });
 }
