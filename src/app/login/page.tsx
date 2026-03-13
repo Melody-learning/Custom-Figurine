@@ -23,7 +23,8 @@ export default function LoginPage() {
         // Manually handle the redirect since we disabled it on the server action
         router.push(result.url);
       } else if (result?.success) {
-        toast.success("Magic link sent successfully!");
+        toast.success("Magic link sent!");
+        router.push("/login/verify-request");
       }
     } catch (err: any) {
       if (err?.digest?.startsWith('NEXT_REDIRECT') || err?.message?.includes('NEXT_REDIRECT')) {
