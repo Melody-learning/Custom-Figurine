@@ -94,9 +94,9 @@ export function HeaderClient({ user }: HeaderClientProps) {
                 color: '#ffffff'
               }}
             >
-              <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_30%,rgba(255,255,255,0.9)_50%,transparent_70%)] mix-blend-overlay -translate-x-full animate-[shimmer_4s_infinite]" />
+              <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_30%,rgba(255,255,255,0.7)_50%,transparent_70%)] mix-blend-plus-lighter -translate-x-full animate-[shimmer_4s_infinite]" />
               <span className="text-xs font-black tracking-wide flex items-center gap-1.5 z-10">
-                <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+                <div className="w-1.5 h-1.5 rounded-full animate-pulse bg-white" />
                 10% OFF
               </span>
             </Link>
