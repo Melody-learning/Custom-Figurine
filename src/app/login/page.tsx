@@ -1,9 +1,29 @@
+'use client';
+
 import { loginWithGoogle, loginWithEmail } from "@/app/actions/auth";
-import { Mail, ArrowRight, ShieldCheck } from "lucide-react";
+import { Mail, ArrowRight, ShieldCheck, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { toast } from "sonner";
+import { useState } from "react";
 
 export default function LoginPage() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleEmailLogin(formData: FormData) {
+    setIsLoading(true);
+    try {
+      const result = await loginWithEmail(formData);
+      if (result?.error) {
+        toast.error(result.error);
+      }
+    } catch (err) {
+      toast.error("An unexpected error occurred during login.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen w-full relative overflow-hidden bg-[var(--background)] flex items-center justify-center pt-20 pb-12 px-6">
       
@@ -71,7 +91,7 @@ export default function LoginPage() {
               </div>
 
               {/* Email Magic Link Form */}
-              <form action={loginWithEmail} className="space-y-4">
+              <form action={handleEmailLogin} className="space-y-4">
                 <div className="space-y-2">
                   <label htmlFor="email" className="text-sm font-medium text-[var(--text-secondary)] ml-1">Email Address</label>
                   <div className="relative group">
@@ -84,7 +104,8 @@ export default function LoginPage() {
                       id="email"
                       placeholder="you@example.com"
                       required
-                      className="block w-full pl-11 pr-4 py-3.5 rounded-xl border border-white/10 bg-white/5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] hover:border-white/20 focus:bg-white/10 focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent transition-all outline-none backdrop-blur-sm"
+                      disabled={isLoading}
+                      className="block w-full pl-11 pr-4 py-3.5 rounded-xl border border-white/10 bg-white/5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] hover:border-white/20 focus:bg-white/10 focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent transition-all outline-none backdrop-blur-sm disabled:opacity-50"
                       style={{ colorScheme: 'dark' }}
                     />
                   </div>
@@ -92,10 +113,11 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary)]/90 font-semibold shadow-lg shadow-[var(--brand-primary)]/20 hover:shadow-[var(--brand-primary)]/40 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary)]/90 font-semibold shadow-lg shadow-[var(--brand-primary)]/20 hover:shadow-[var(--brand-primary)]/40 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
-                  Send Magic Link
-                  <ArrowRight className="w-4 h-4 ml-1" />
+                  {isLoading ? "Sending Magic Link..." : "Send Magic Link"}
+                  {isLoading ? <Loader2 className="w-4 h-4 ml-1 animate-spin" /> : <ArrowRight className="w-4 h-4 ml-1" />}
                 </button>
               </form>
 

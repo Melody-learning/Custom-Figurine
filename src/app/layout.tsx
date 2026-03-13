@@ -5,6 +5,7 @@ import { Providers } from "./providers";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CartSidebar } from "@/components/CartSidebar";
+import { Toaster } from "sonner";
 
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -30,6 +31,7 @@ export default function RootLayout({
           <Footer />
           <CartSidebar />
         </Providers>
+        <Toaster position="bottom-left" theme="dark" richColors />
       </body>
     </html>
   );

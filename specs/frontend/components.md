@@ -24,3 +24,10 @@
 由于邮箱魔术链接无法提供第三方 OAuth 的完整资料，当用户只拥有邮箱数据时：
 - **名称渲染**: 如果 `user.name` 为空，应提取 `user.email` 的前缀（`@`前面的内容）作为显式的 "Name" 替代。
 - **头像渲染**: 如果 `user.image` 为空，应当提取其计算出名称的第一个字母，并将其居中放置于一个带有品牌色渐变/纯色的圆形容器中（例如 `bg-gradient-to-br from-[var(--brand-primary)] to-purple-600`）。绝不可出现破碎图片或默认呆板的占位图。
+
+## 3. 全局反馈与异常监控 (Global App Feedback)
+### 3.1 底部弹出提示框组件 (Toast Notifications)
+系统底层集成了极具现代感质感的交互通知库 `sonner`，并作为 `<Toaster />` 植入在全站 `RootLayout`。
+- **定位**: 必须挂载在屏幕左下方 (bottom-left)，这是为了拟合开发者本地终端/错误控制台经常出现的位置，符合心理模型。
+- **主题风格**: 强制开启 `richColors` 与 `theme="dark"` (或跟随系统深色主题)，保证深色模式下的流光极简质感。
+- **应用场景**: 用于所有 Server Component, Server Actions 以及 Client Component 中需要跳出边界，给予用户的**结果级非阻塞警告**（例如：API 密钥未配置、获取 3D 模型失败等线上静默报错）。
