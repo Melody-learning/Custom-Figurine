@@ -100,15 +100,60 @@ export default function CustomizePage() {
     }));
   };
 
-  // 处理文件上传
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 处理文件上传并压缩 (Fix QuotaExceededError)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setUploadedImage(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // We use a Promise to read and compress the image using Canvas
+    const compressImage = (file: File, maxWidth: number): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            // Calculate new dimensions
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else if (height > maxWidth) {
+              // optional: handle extremely tall images
+              width = Math.round((width * maxWidth) / height);
+              height = maxWidth;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            
+            // Fill with white background in case of transparent PNG
+            if (ctx) {
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+            }
+            
+            // Export as JPEG at 80% quality (drastically reduces base64 size for localStorage)
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
+          };
+          img.onerror = reject;
+          img.src = event.target?.result as string;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    };
+
+    try {
+      const compressedBase64 = await compressImage(file, 800);
+      setUploadedImage(compressedBase64);
+    } catch (error) {
+      console.error("Failed to compress image:", error);
+      alert(t('uploadError') || 'Failed to process image');
     }
   };
 
