@@ -12,7 +12,14 @@ export async function loginWithEmail(formData: FormData) {
   if (!email) return { error: "Email is required" };
 
   try {
-    await signIn("resend", { email, redirectTo: "/profile" });
+    const res = await signIn("resend", { email, redirect: false, redirectTo: "/profile" });
+    if (res?.error) {
+      return { error: `Auth Provider Error: ${res.error}` };
+    }
+    // Since redirect: false suppresses the automatic redirect, we check if it gives a URL
+    if (res?.url) {
+      return { url: res.url }; // Pass the redirect URL back to the client
+    }
     return { success: true };
   } catch (error) {
     if (error instanceof AuthError) {

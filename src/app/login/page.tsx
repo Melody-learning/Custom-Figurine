@@ -7,8 +7,11 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useState } from "react";
 
+import { useRouter } from "next/navigation";
+
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   async function handleEmailLogin(formData: FormData) {
     setIsLoading(true);
@@ -16,6 +19,11 @@ export default function LoginPage() {
       const result = await loginWithEmail(formData);
       if (result?.error) {
         toast.error(result.error);
+      } else if (result?.url) {
+        // Manually handle the redirect since we disabled it on the server action
+        router.push(result.url);
+      } else if (result?.success) {
+        toast.success("Magic link sent successfully!");
       }
     } catch (err: any) {
       if (err?.digest?.startsWith('NEXT_REDIRECT') || err?.message?.includes('NEXT_REDIRECT')) {
