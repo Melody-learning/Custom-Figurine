@@ -79,8 +79,8 @@
   }
 
   @keyframes shimmer {
-    0% { transform: translateX(-150%); }
-    50%, 100% { transform: translateX(150%); }
+    0% { transform: translateX(-200%); }
+    40%, 100% { transform: translateX(200%); }
   }
 
   @keyframes reveal-up {

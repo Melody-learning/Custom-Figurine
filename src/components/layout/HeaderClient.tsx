@@ -95,7 +95,7 @@ export function HeaderClient({ user }: HeaderClientProps) {
                 color: config.colors.accent
               }}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 dark:via-black/20 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 dark:via-black/20 to-transparent -translate-x-full animate-[shimmer_4s_infinite]" />
               <span className="text-xs font-bold flex items-center gap-1.5 z-10" style={{ color: config.colors.accent }}>
                 <div className="w-1.5 h-1.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: config.colors.accent }} />
                 10% OFF
