@@ -18,6 +18,9 @@ export default function LoginPage() {
         toast.error(result.error);
       }
     } catch (err: any) {
+      if (err?.digest?.startsWith('NEXT_REDIRECT') || err?.message?.includes('NEXT_REDIRECT')) {
+        throw err;
+      }
       console.error("Raw login error:", err);
       toast.error(err?.message || "An unexpected error occurred during login.");
     } finally {
