@@ -8,6 +8,7 @@ import { useThemeConfig } from '@/lib/useTheme';
 import { themeConfig, Theme } from '@/lib/theme';
 import { useState } from 'react';
 import Image from 'next/image';
+import { AnimatedCouponBadge } from './AnimatedCouponBadge';
 
 interface HeaderClientProps {
   user: {
@@ -86,22 +87,7 @@ export function HeaderClient({ user }: HeaderClientProps) {
 
           {/* Active Coupon Badge */}
           {user?.hasWelcomeCoupon && (
-            <Link
-              href="/profile"
-              className="hidden sm:flex relative items-center gap-1.5 px-3 py-1.5 rounded-full transition-opacity hover:opacity-70 group overflow-hidden border"
-              style={{
-                borderColor: config.colors.accent,
-                color: config.colors.accent
-              }}
-            >
-              <div 
-                className="absolute inset-0 bg-[linear-gradient(115deg,transparent_30%,currentColor_50%,transparent_70%)] opacity-20 -translate-x-full animate-[shimmer_4s_infinite]" 
-              />
-              <span className="text-xs font-bold tracking-wide flex items-center gap-1.5 z-10">
-                <div className="w-1.5 h-1.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: config.colors.accent }} />
-                10% OFF
-              </span>
-            </Link>
+            <AnimatedCouponBadge accentColor={config.colors.accent} />
           )}
 
           {/* Cart */}
