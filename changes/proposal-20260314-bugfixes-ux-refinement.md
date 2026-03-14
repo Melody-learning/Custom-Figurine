@@ -28,14 +28,15 @@
 ### 针对全局提示 Toast 和首登庆典修改：
 - `[MODIFIED]` `src/components/SessionToastProvider.tsx`:
   - 弃用之前的每次 Session 刷新就撒花的逻辑，彻底劈成两截。
-  - **首登专属 (First Time Ever)**: 基于长效的 `localStorage.getItem("has_ever_celebrated_login")` 触发。仅触发一次小型彩带 (40 颗粒，收束型)，附带高级定制样式的 `Welcome, Creator! 🎉`。
+  - **首登专属 (First Time Ever)**: 基于长效的 `localStorage.getItem("has_ever_celebrated_login")` 触发。再次精简了彩带特效，将颗粒数砍到 `15`，射速降至 `8`，引力提升至 `1.5`，生命周期 `ticks: 40`，使其变成在右上角原地微小“啵”开的极简点缀，杜绝满屏乱飞。
   - **日常登录 (Returning)**: 基于 `sessionStorage` 拦截。不触发任何炫技动画，仅使用最基础的 Sonner Green Success 样式 `Welcome back!` 秒现秒没。
-  - **样式修复**: 补齐 `className="font-sans"` 避免线上全站字体断链，使用强制的 `bg-white dark:bg-zinc-950` 底色防止透明度失效。
+  - **样式修复**: 补齐 `className="font-sans text-black dark:text-white"` 避免线上全站字体断链以及浅色模式下变成白底白字，使用强制的 `bg-white dark:bg-zinc-950` 底色防止透明度失效。
  
 ### 针对 Header 与营销弹窗的 UI 断层修改：
 - `[MODIFIED]` `src/components/marketing/WelcomeModal.tsx`:
   - 把容易被 Vercel Edge Server 搞崩的 Next.js `<Image src="after.jpg">` 直接降级成了原生的 HTML `<img>` 标签，用物理渲染绕过配额错误。
   - Modal 底板背景由依赖客户端动态变量的 `var(--surface-sunken)` 替换为绝对静止的 `bg-white dark:bg-zinc-950`，解决线上极度透明问题。
+  - 移除了 Email 输入框的 `backdrop-blur-sm` 以及强制注入的 `bg-white/5`。改用具有实色回退保护的 `bg-black/5 dark:bg-white/5`，根除了线上 Safari/端侧浏览器因为多重高斯模糊导致的输入框左侧黑灰块异常渲染 `(Artifact Bug)`。
 - `[MODIFIED]` `src/components/layout/HeaderClient.tsx`:
   - 废除了 10% 优惠券胶囊的 `mix-blend-overlay` 和 `bg-[accent]` 背景，使其退回完全 2D 极简的透明线框状态（`border-accent`）。同时 4s 的扫光特效退格为 `opacity-20` 的扁平色块移动。
   - 给所有功能性按钮（语言、主题、购物车、卡券复制区、下线）补全了 `cursor-pointer`。

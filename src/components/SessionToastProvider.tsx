@@ -40,10 +40,11 @@ export function SessionToastProvider({ children }: { children: React.ReactNode }
           setTimeout(() => {
              import("canvas-confetti").then((confetti) => {
                confetti.default({
-                 particleCount: 50,
-                 spread: 60,
-                 startVelocity: 20,
-                 gravity: 0.8,
+                 particleCount: 15,
+                 spread: 20,
+                 startVelocity: 8,
+                 gravity: 1.5,
+                 ticks: 40,
                  origin: { y: 0.1, x: 0.95 }, // Pop from the top-right corner where the toast is
                  colors: ['#FFeb3b', '#00f0ff', '#ff003c', '#00ff66', '#a855f7'], 
                  disableForReducedMotion: true,

@@ -149,7 +149,7 @@ export function WelcomeModal() {
                         placeholder="Enter your email address..."
                         required
                         disabled={isLoading}
-                        className="block w-full pl-11 pr-4 py-3.5 rounded-xl border border-white/10 bg-white/5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] hover:border-white/20 focus:bg-white/10 focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent transition-all outline-none backdrop-blur-sm disabled:opacity-50"
+                        className="block w-full pl-11 pr-4 py-3.5 rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] hover:border-black/20 dark:hover:border-white/20 focus:bg-black/10 dark:focus:bg-white/10 focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent transition-all outline-none disabled:opacity-50"
                         style={{ colorScheme: 'dark' }}
                       />
                     </div>
