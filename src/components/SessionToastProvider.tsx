@@ -12,57 +12,39 @@ export function SessionToastProvider({ children }: { children: React.ReactNode }
     // Only proceed if user just successfully authenticated
     if (status === "authenticated" && session?.user) {
       
-      // Check if this is the very first time they are logging in on this device
-      const hasCelebrated = localStorage.getItem("has_ever_celebrated_login");
       // Use sessionStorage so the toast only fires ONCE per browser tab session
       const hasWelcomedThisSession = sessionStorage.getItem("has_welcomed_this_session");
       
       if (!hasWelcomedThisSession) {
-        
-        // Very first login ever on this device
-        if (!hasCelebrated) {
-          toast("Welcome, Creator! 🎉", {
-            description: (session.user as any).hasWelcomeCoupon 
-              ? "Your 10% Welcome discount is now active!" 
-              : "Your portal is unlocked.",
-            icon: <Sparkles className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />,
-            duration: 6000,
-            position: "top-right",
-            classNames: {
-              toast: "font-sans bg-white dark:bg-zinc-950 border border-black/10 dark:border-white/10 shadow-xl",
-              title: "text-zinc-900 dark:text-zinc-100 font-bold text-base",
-              description: "text-zinc-600 dark:text-zinc-400"
-            },
-            style: {
-              marginTop: '4rem'
-            }
-          });
-          
+        // 1. Standard Welcome Back Toast for all logins
+        toast.success("Welcome back!", {
+          duration: 3000,
+          position: "top-right",
+          className: "font-sans",
+          style: {
+            marginTop: '4rem'
+          }
+        });
+
+        // 2. Extracted Top-Center Prominent Coupon Reminder
+        if ((session.user as any).hasWelcomeCoupon) {
           setTimeout(() => {
-             import("canvas-confetti").then((confetti) => {
-               confetti.default({
-                 particleCount: 30,
-                 spread: 60,
-                 startVelocity: 20,
-                 gravity: 1,
-                 ticks: 100,
-                 origin: { y: 0.15, x: 0.9 }, // Top right area, clearly visible
-                 colors: ['#FFeb3b', '#00f0ff', '#ff003c', '#00ff66', '#a855f7'], 
-                 zIndex: 99999
-               });
-             });
+            toast("10% OFF Welcome Discount Active!", {
+              description: "Your exclusive discount is stored safely in your Profile vault.",
+              icon: <Sparkles className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />,
+              duration: 8000,
+              position: "top-center",
+              classNames: {
+                toast: "font-sans bg-zinc-900 dark:bg-white border border-white/20 dark:border-black/20 shadow-2xl backdrop-blur-xl",
+                title: "text-white dark:text-zinc-900 font-bold text-base tracking-wide",
+                description: "text-zinc-300 dark:text-zinc-600 text-sm mt-0.5"
+              },
+              style: {
+                marginTop: '1rem',
+                borderRadius: '1rem'
+              }
+            });
           }, 300);
-          localStorage.setItem("has_ever_celebrated_login", "true");
-        } else {
-          // Normal, subsequent logins (No confetti, simple text)
-          toast.success("Welcome back!", {
-            duration: 3000,
-            position: "top-right",
-            className: "font-sans",
-            style: {
-              marginTop: '4rem'
-            }
-          });
         }
         
         // Mark as welcomed for this session so we don't spam toasts on refresh
