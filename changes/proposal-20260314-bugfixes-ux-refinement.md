@@ -28,9 +28,9 @@
 ### 针对全局提示 Toast 和首登庆典修改：
 - `[MODIFIED]` `src/components/SessionToastProvider.tsx`:
   - 弃用之前的每次 Session 刷新就撒花的逻辑，彻底劈成两截。
-  - **首登专属 (First Time Ever)**: 基于长效的 `localStorage.getItem("has_ever_celebrated_login")` 触发。再次精简了彩带特效，将颗粒数砍到 `15`，射速降至 `8`，引力提升至 `1.5`，生命周期 `ticks: 40`，使其变成在右上角原地微小“啵”开的极简点缀，杜绝满屏乱飞。
+  - **首登专属 (First Time Ever)**: 基于长效的 `localStorage.getItem("has_ever_celebrated_login")` 触发。再次精简了彩带特效，移除可能阻碍特效渲染的 `disableForReducedMotion`，调整发射范围 (`spread: 60`, `particleCount: 30`)，并将爆炸中心锁定在右上角 Toast 弹窗的绝对视觉中心 (`origin: { x: 0.9, y: 0.15 }`)，杜绝满屏乱飞或在左下角迷失的问题。
   - **日常登录 (Returning)**: 基于 `sessionStorage` 拦截。不触发任何炫技动画，仅使用最基础的 Sonner Green Success 样式 `Welcome back!` 秒现秒没。
-  - **样式修复**: 补齐 `className="font-sans text-black dark:text-white"` 避免线上全站字体断链以及浅色模式下变成白底白字，使用强制的 `bg-white dark:bg-zinc-950` 底色防止透明度失效。
+  - **样式真理层修复 (Sonner Architecture)**: 以往依赖 `className` 和 `style` 被系统默认颜色覆盖（导致截图中的白底白字），现在彻底启用 Sonner 官方标准的深浅映射机制 `classNames: { toast: "...", title: "text-zinc-900 dark:text-zinc-100", description: "..." }`，在最底层的 DOM 节点上强制锁死 Light/Dark 模式下的最高对比级纯度。
  
 ### 针对 Header 与营销弹窗的 UI 断层修改：
 - `[MODIFIED]` `src/components/marketing/WelcomeModal.tsx`:

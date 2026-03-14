@@ -28,27 +28,27 @@ export function SessionToastProvider({ children }: { children: React.ReactNode }
             icon: <Sparkles className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />,
             duration: 6000,
             position: "top-right",
-            className: "font-sans text-black dark:text-white", // Force inheriting Next.js global font and fix Light Mode visibility
+            classNames: {
+              toast: "font-sans bg-white dark:bg-zinc-950 border border-black/10 dark:border-white/10 shadow-xl",
+              title: "text-zinc-900 dark:text-zinc-100 font-bold text-base",
+              description: "text-zinc-600 dark:text-zinc-400"
+            },
             style: {
-              marginTop: '4rem',
-              border: '1px solid rgba(150, 150, 150, 0.2)',
-              backdropFilter: 'blur(12px)',
-              background: 'var(--surface-sunken, rgba(255,255,255,0.9))'
+              marginTop: '4rem'
             }
           });
           
           setTimeout(() => {
              import("canvas-confetti").then((confetti) => {
                confetti.default({
-                 particleCount: 15,
-                 spread: 20,
-                 startVelocity: 8,
-                 gravity: 1.5,
-                 ticks: 40,
-                 origin: { y: 0.1, x: 0.95 }, // Pop from the top-right corner where the toast is
+                 particleCount: 30,
+                 spread: 60,
+                 startVelocity: 20,
+                 gravity: 1,
+                 ticks: 100,
+                 origin: { y: 0.15, x: 0.9 }, // Top right area, clearly visible
                  colors: ['#FFeb3b', '#00f0ff', '#ff003c', '#00ff66', '#a855f7'], 
-                 disableForReducedMotion: true,
-                 zIndex: 9999
+                 zIndex: 99999
                });
              });
           }, 300);
