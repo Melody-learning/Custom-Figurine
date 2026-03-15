@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { put } from '@vercel/blob';
+import { waitUntil } from '@vercel/functions';
 
 interface StartGenerationPayload {
   originalImageB64: string;
@@ -55,22 +56,25 @@ export async function startAsyncGeneration(payload: StartGenerationPayload) {
     });
 
     // 3. Fire the Webhook to process in the background.
-    // We don't await this; Vercel's async fetch or background queue handles it.
+    // In Vercel, un-awaited promises are immediately killed when the response returns.
+    // We MUST use waitUntil() to keep the container execution context alive just long enough to dispatch the fetch.
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
     
-    // We don't await the fetch so the UI unblocks instantly
-    fetch(`${baseUrl}/api/webhooks/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-         assetId: asset.id, 
-         modelId: payload.modelId,
-         // We pass the raw base64 or the remote URL to the worker. 
-         // Since webhooks can have payload limits, passing the URL is safer, 
-         // but our generate action already needs b64. Let's pass the URL and let the worker fetch it to save webhook size.
-         originalImageUrl: blob.url
-      })
-    }).catch(e => console.error("[StartAsyncGeneration] Webhook fetch error:", e));
+    // We don't await the fetch so the UI unblocks instantly, but we tell Vercel to wait for its network dispatch to complete.
+    waitUntil(
+      fetch(`${baseUrl}/api/webhooks/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+           assetId: asset.id, 
+           modelId: payload.modelId,
+           originalImageUrl: blob.url
+        })
+      }).then(res => {
+         if (!res.ok) console.error(`[StartAsyncGeneration] Webhook fetch error: ${res.status} ${res.statusText}`);
+         else console.log(`[StartAsyncGeneration] Webhook successfully dispatched to ${baseUrl}`);
+      }).catch(e => console.error("[StartAsyncGeneration] Webhook fetch network error:", e))
+    );
 
     return { success: true, assetId: asset.id };
   } catch (error: any) {

@@ -79,8 +79,19 @@ export default function FigurineGenerationGallery({ subjectImageB64, initialView
          setStatus('GENERATING_SECONDARY'); // Represents "Polling" state
 
          // 2. Poll the Database via our GET Asset Route
+         const MAX_POLLING_TIME_MS = 120000; // 2 minutes strict timeout
+         const startTime = Date.now();
+
          const pollInterval = setInterval(async () => {
             try {
+               // Check Timeout first
+               if (Date.now() - startTime > MAX_POLLING_TIME_MS) {
+                  clearInterval(pollInterval);
+                  setErrorMessage("Generation timed out. The server took too long to respond. Please try again.");
+                  setStatus('ERROR');
+                  return;
+               }
+
                const res = await fetch(`/api/assets/${assetId}`);
                if (!res.ok) return;
                const data = await res.json();
