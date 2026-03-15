@@ -23,7 +23,7 @@
     "https-proxy-agent": "^8.0.0",
     "idb-keyval": "^6.2.2",
     "lucide-react": "^0.576.0",
-    "next": "^15.1.0",
+    "next": "^15.1.7",
     "next-auth": "^5.0.0-beta.30",
     "react": "19.2.3",
     "react-dom": "19.2.3",
