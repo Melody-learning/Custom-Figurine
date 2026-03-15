@@ -44,3 +44,17 @@ graph TD
 - **图片云存储**: **Vercel Blob** - 用于沉淀用户上传的原图与 AI 产出的资产。
 - **电商基石**: **Shopify** - 提供底层购物车持久化、商品模型数据、多币种结账能力 (`@shopify/shopify-api`)。
 - **AI 生图**: 接入 Replicate、Stability AI 或自研定制微型模型服务。
+
+---
+
+## 4. 故障排查与已知问题记录 (Troubleshooting & Known Issues)
+
+### 4.1 本地开发环境: 数据库连接失败 (Error: Can't reach database server at localhost:5432)
+**问题描述**：在本地开发时访问需要读取数据库的页面 (例如 `/profile`)，偶尔会遇到 Prisma 报错 `Invalid prisma.xxxx.findMany() invocation: Can't reach database server at localhost:5432`。此问题通常在电脑重启后首次启动项目时出现。
+**根本原因**：项目的本地 PostgreSQL 数据库运行在 Docker 容器 (`figurine_postgres`) 中。电脑意外关机或重启后，Docker 桌面端 (Docker Desktop) 可能未随系统自启，或者即使自启，该 Postgres 容器状态也未恢复为 Running。
+**解决规范与流程**：
+1. **启动 Docker 引擎**：确保 Windows/Mac 上的 Docker Desktop 已启动并处于 `Engine running` 状态。
+2. **拉起数据库容器**：在项目根目录运行 `docker-compose up -d` 重新启动数据库服务。
+3. **确认连通性**：运行 `docker ps`，确认名为 `figurine_postgres` 的容器成功在 `5432` 端口运行。
+4. **重启 Web 服务**：重新启动 Next.js 本地开发服务器 (`npm run dev`)。
+*(注：如果启动容器后 Prisma 仍然报错 EPERM 或 EBUSY，通常是因为 Web 服务占据了 Prisma 生成引擎的文件锁，先关掉 Web 服务，跑一次 `docker-compose up -d` 确认绿灯，再重新 `npm run dev` 即可恢复。)*

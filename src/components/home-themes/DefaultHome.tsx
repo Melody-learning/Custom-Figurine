@@ -5,11 +5,13 @@ import { ArrowRight, Upload, Sparkles, Package, Star, Shield, Truck, ChevronDown
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
 import { translations } from '@/lib/i18n';
+import { useStore } from '@/lib/store';
 import { ImageSlider } from '@/components/ImageSlider';
 import React, { useState, useMemo } from 'react';
 
 export default function Home() {
   const { t: translate, language } = useTranslation();
+  const { resetGenerationFlow } = useStore();
   const { config, theme } = useThemeConfig();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [sliderPos, setSliderPos] = useState(50);
@@ -166,7 +168,7 @@ export default function Home() {
                 {t('heroSubtitle')}
               </p>
               <div className="flex flex-wrap gap-4">
-                <Link href="/customize" className={`inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-medium ${styles.button}`} style={{ backgroundColor: config.colors.primary, color: '#fff' }}>
+                <Link href="/customize" onClick={() => resetGenerationFlow()} className={`inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-medium ${styles.button}`} style={{ backgroundColor: config.colors.primary, color: '#fff' }}>
                   {t('startCustomizing')} <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link href="#how-it-works" className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-medium rounded-full border-2 hover:bg-gray-50 transition-colors" style={{ borderColor: config.colors.border, color: config.colors.text }}>
@@ -405,7 +407,7 @@ export default function Home() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="mb-6 text-3xl font-bold" style={{ color: config.colors.text }}>{t('ctaTitle')}</h2>
           <p className="mb-8 text-xl" style={{ color: config.colors.textMuted }}>{t('ctaSubtitle')}</p>
-          <Link href="/customize" className={`inline-flex items-center gap-2 px-8 py-4 text-lg font-medium ${styles.button}`} style={{ backgroundColor: config.colors.primary, color: '#fff' }}>
+          <Link href="/customize" onClick={() => resetGenerationFlow()} className={`inline-flex items-center gap-2 px-8 py-4 text-lg font-medium ${styles.button}`} style={{ backgroundColor: config.colors.primary, color: '#fff' }}>
             {t('getStarted')} <ArrowRight className="h-5 w-5" />
           </Link>
         </div>

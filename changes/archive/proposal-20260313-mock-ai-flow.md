@@ -1,7 +1,7 @@
 ---
 author: "Antigravity"
 date: "2026-03-13"
-status: "Pending Review"
+status: "Implemented & Archived"
 type: "Proposal"
 ---
 
@@ -29,7 +29,12 @@ type: "Proposal"
 - `[MODIFIED]` 修改 `src/app/customize/page.tsx` 中 `handleGenerate` 的逻辑，使其发起对 `/api/generate` 的 HTTP FETCH 请求，并展示真正的回传 3D 图片成果。
 
 ## 4. 实施 Checklist (Implementation Plan)
-- [ ] AI Agent 生成一张 3D 白模/手办效果的高质量展示图保存至本地 `public/images/`.
-- [ ] 创建 `/api/generate/route.ts` 搭建模拟延迟后端的接口。
-- [ ] 改造 `customize/page.tsx` 的请求链路。
-- [ ] 进行完整提交流程，由司令再次端到端测试。
+- [x] AI Agent 生成一张 3D 白模/手办效果的高质量展示图保存至本地 `public/images/`.
+- [x] 创建 `/api/generate/route.ts` 搭建模拟延迟后端的接口。
+- [x] 改造 `customize/page.tsx` 的请求链路。
+- [x] 进行完整提交流程，由司令再次端到端测试。
+
+---
+## 5. 实施结果 (Resolution)
+**状态**: ✅ 完成并归档。
+**备注**: 首个跑通的全链路流被成功接力到了定制页，后续已经通过真实的 Gemini/OpenRouter API 链路取代了本 Mock。本提案历史使命已达成。

@@ -4,8 +4,13 @@ import { useState, useRef, useEffect } from 'react';
 import { Upload, Sparkles, Loader2, ArrowRight, Check, Image as ImageIcon } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { getProducts, Product, ProductVariant } from '@/lib/shopify';
+import { saveGeneratedAsset } from '@/app/actions/save-asset';
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
+import FigurineGenerationGallery from '@/components/ai/FigurineGenerationGallery';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 type Step = 'upload' | 'generate' | 'select' | 'confirm';
 
@@ -16,6 +21,8 @@ export default function CustomizePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t: translate } = useTranslation();
   const { config, theme } = useThemeConfig();
+  const { data: session } = useSession();
+  const router = useRouter();
 
   // 简化的翻译函数，返回字符串
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,17 +33,58 @@ export default function CustomizePage() {
   // 选项状态
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [galleryStatus, setGalleryStatus] = useState<string>('IDLE');
+  const [isAddedToCart, setIsAddedToCart] = useState<boolean>(false);
 
   const {
     uploadedImage,
     setUploadedImage,
     generatedImage,
     setGeneratedImage,
-    generationStatus,
+    generatedViews,
+    setGeneratedViews,
     setGenerationStatus,
+    generationStatus,
     addToCart,
     setCartOpen,
+    setLoginModalOpen,
+    editingVaultAssetId,
+    setEditingVaultAssetId,
+    resetGenerationFlow,
   } = useStore();
+
+  // UX 状态机核心：初次挂载与刷新归零 (Blacklist Pattern)
+  useEffect(() => {
+    // Only run this alignment once on mount, rather than reacting to every state change naturally.
+    // This prevents "bounce-back" bugs when navigating away but leaving state dirty.
+    const isFromVault = new URLSearchParams(window.location.search).get('source') === 'vault';
+
+    if (isFromVault && editingVaultAssetId) {
+       // Safely entering from Vault, jump to gallery
+       setStep('generate');
+    } else {
+       // Entering organically without a vault source. Blanket wipe.
+       resetGenerationFlow();
+       setStep('upload');
+       setIsAddedToCart(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array ensures this runs strictly on mount
+
+  // 回滚防护 (Auto-Recovery): 修复当在 /customize 页面内再次点击顶部 /customize 链接出现的白屏。
+  // 因为 zustand state 被清空但不触发挂载重载，我们需要一个小探针把本地路由重置。
+  useEffect(() => {
+     if (!uploadedImage && !editingVaultAssetId && step !== 'upload') {
+        setStep('upload');
+        setIsAddedToCart(false);
+     }
+  }, [uploadedImage, editingVaultAssetId, step]);
+
+  // ==========================================
+  // 浏览器原生拦截（已废除）: 曾经这里有 beforeunload 和 popstate
+  // 根据 Phase 4 (Holistic Navigation & Safe Context)，既然资产一经生成或唤回就一定会在 Vault 存在，
+  // 我们不再暴力锁死浏览器的返回和刷新。
+  // ==========================================
 
   // 加载商品列表
   useEffect(() => {
@@ -116,14 +164,15 @@ export default function CustomizePage() {
             let width = img.width;
             let height = img.height;
             
-            // Calculate new dimensions
-            if (width > maxWidth) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
-            } else if (height > maxWidth) {
-              // optional: handle extremely tall images
-              width = Math.round((width * maxWidth) / height);
-              height = maxWidth;
+            // Calculate new dimensions with a STRICT 1024 bounding box (1K Normalization)
+            if (Math.max(width, height) > maxWidth) {
+              if (width > height) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              } else {
+                width = Math.round((width * maxWidth) / height);
+                height = maxWidth;
+              }
             }
             
             canvas.width = width;
@@ -149,7 +198,7 @@ export default function CustomizePage() {
     };
 
     try {
-      const compressedBase64 = await compressImage(file, 800);
+      const compressedBase64 = await compressImage(file, 1024); // 1K bounding box limit
       setUploadedImage(compressedBase64);
     } catch (error) {
       console.error("Failed to compress image:", error);
@@ -157,39 +206,33 @@ export default function CustomizePage() {
     }
   };
 
-  // 模拟 AI 生成图片 (Network Proxy to Mock Server)
-  const handleGenerate = async () => {
-    if (!uploadedImage) return;
-
-    setGenerationStatus('generating');
-    setStep('generate');
-
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: uploadedImage }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate image');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleGenerate = async (overrideImageTarget?: string) => {
+    if (!session) {
+      if (uploadedImage) {
+        sessionStorage.setItem('pendingCustomFigurineImage', uploadedImage);
       }
-
-      const data = await response.json();
-      
-      // Use the returned high-quality 3D mock rendering
-      setGeneratedImage(data.resultUrl);
-      setGenerationStatus('success');
-      setStep('select');
-    } catch (error) {
-      console.error('Generation Error:', error);
-      setGenerationStatus('idle'); // Rollback on failure
-      setStep('upload');
-      alert('AI Generation Mock Failed');
+      toast(t('loginRequired') as string);
+      setLoginModalOpen(true);
+      return;
     }
+
+    // Instead of faking a network call here, we just transition UI state
+    // and let the FigurineGenerationGallery handle the actual Generation pipeline
+    setStep('generate');
   };
 
-  // 加入购物车
+  // Restore pending image after login
+  useEffect(() => {
+    const pendingImage = sessionStorage.getItem('pendingCustomFigurineImage');
+    if (pendingImage && session) {
+      setUploadedImage(pendingImage);
+      sessionStorage.removeItem('pendingCustomFigurineImage');
+      // Already handled by global SessionToastProvider
+    }
+  }, [session, setUploadedImage]);
+
+  // 加入购物车并发动终极状态清空
   const handleAddToCart = () => {
     if (!selectedVariant) return;
 
@@ -204,6 +247,7 @@ export default function CustomizePage() {
     });
 
     setCartOpen(true);
+    setIsAddedToCart(true);
   };
 
   const product = products[0];
@@ -269,107 +313,197 @@ export default function CustomizePage() {
   const styles = getThemeStyles();
 
   return (
-    <main className="min-h-screen py-12 relative overflow-hidden" style={{ backgroundColor: config.colors.backgroundAlt }}>
+    <main className={`min-h-screen relative overflow-hidden transition-all duration-700 ${step === 'generate' && galleryStatus === 'COMPLETE' ? 'py-4 sm:py-6' : 'py-12'}`} style={{ backgroundColor: config.colors.backgroundAlt }}>
       {/* Animated Background Gradients */}
       <div className="absolute top-0 right-0 w-full h-1/2 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
       <div className="absolute top-20 -left-20 w-96 h-96 bg-gradient-to-r from-purple-200/30 to-pink-200/30 rounded-full blur-3xl animate-float pointer-events-none" style={{ animationDelay: '0s' }} />
       <div className="absolute bottom-20 -right-20 w-96 h-96 bg-gradient-to-l from-yellow-200/30 to-rose-200/30 rounded-full blur-3xl animate-float pointer-events-none" style={{ animationDelay: '2s' }} />
 
-      <div className="container mx-auto max-w-4xl px-4 relative z-10">
-        {/* 步骤指示器 */}
-        <div className="mb-8 flex justify-center">
-          <div className="flex items-center gap-4">
-            {['upload', 'generate', 'select', 'confirm'].map((s, i) => (
-              <div key={s} className="flex items-center">
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-                    step === s
-                      ? styles.stepActive
-                      : ['upload', 'generate', 'select', 'confirm'].indexOf(step) > i
-                      ? styles.stepCompleted
-                      : styles.stepInactive
-                  }`}
-                >
-                  {['upload', 'generate', 'select', 'confirm'].indexOf(step) > i ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    i + 1
-                  )}
-                </div>
-                {i < 3 && <div className="h-0.5 w-8" style={{ backgroundColor: config.colors.border }} />}
+      <div className={`w-full mx-auto px-4 sm:px-6 xl:px-8 relative z-10 transition-all duration-700 ${step === 'generate' && galleryStatus === 'COMPLETE' ? 'max-w-[1600px]' : 'max-w-4xl'}`}>
+        
+        {/* Professional Header Row with Steps & Security Badge */}
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-black/10 dark:border-white/10 pb-6 transition-all duration-500">
+           {/* Left: Dynamic Step Title & Vault Status */}
+           <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-4">
+                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight transition-all" style={{ color: config.colors.text }}>
+                    {step === 'upload' && (t('uploadTitle') || 'Initialize Core')}
+                    {step === 'generate' && 'Virtualize Model'}
+                    {step === 'select' && (t('chooseOptions') || 'Configure Specs')}
+                    {step === 'confirm' && (t('confirmTitle') || 'Review Assets')}
+                 </h1>
+                 
+                 {/* Security Badge inline with title */}
+                 {step === 'generate' && (galleryStatus === 'GENERATING_PRIMARY' || galleryStatus === 'GENERATING_SECONDARY') && !editingVaultAssetId && (
+                     <div className="animate-in fade-in slide-in-from-left-2 zoom-in duration-300">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#00f0ff]/10 border border-[#00f0ff]/20 text-[#00f0ff] text-[10px] sm:text-xs font-bold uppercase tracking-widest shadow-sm">
+                           <Loader2 className="w-3 h-3 animate-spin inline-block" />
+                           Generating...
+                        </div>
+                     </div>
+                 )}
+                 {((step === 'generate' && (galleryStatus === 'COMPLETE' || editingVaultAssetId)) || step === 'select' || step === 'confirm') && (
+                     <div className="animate-in fade-in slide-in-from-left-2 zoom-in duration-300">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#00D084]/10 border border-[#00D084]/20 text-[#00D084] text-[10px] sm:text-xs font-bold uppercase tracking-widest shadow-sm">
+                           <span className="relative flex h-2 w-2 align-middle">
+                             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00D084]"></span>
+                           </span>
+                           Vault Asset
+                        </div>
+                     </div>
+                 )}
               </div>
-            ))}
-          </div>
+              <p className="text-sm font-medium opacity-70 transition-all max-w-xl" style={{ color: config.colors.text }}>
+                 {step === 'upload' && (t('uploadDesc') || 'Upload your source subject to begin the 3D translation process.')}
+                 {step === 'generate' && 'Vision Language Model is actively sculpting your parameters into a 3D mesh.'}
+                 {step === 'select' && 'Select the physical crafting options, dimensions, and platform for your 3D model.'}
+                 {step === 'confirm' && 'Final review of visual and physical parameters before dispatching to manufacturing.'}
+              </p>
+           </div>
+
+           {/* Right: Micro Steps Indicator */}
+           <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 p-1.5 rounded-full border border-black/10 dark:border-white/10 shrink-0">
+              {['upload', 'generate', 'select', 'confirm'].map((s, i) => {
+                 const isActive = step === s;
+                 const isPast = ['upload', 'generate', 'select', 'confirm'].indexOf(step) > i;
+                 
+                 return (
+                     <div key={s} className="flex items-center" title={`Step ${i+1}`}>
+                        <div 
+                           className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-sm ${isActive ? 'text-white scale-110' : isPast ? 'bg-transparent text-[#00D084]' : 'bg-transparent'}`}
+                           style={{ 
+                              backgroundColor: isActive ? config.colors.primary : undefined,
+                              color: !isActive && !isPast ? config.colors.textMuted : undefined 
+                           }}
+                        >
+                           {isPast ? '✓' : i + 1}
+                        </div>
+                        {i < 3 && <div className={`w-3 sm:w-6 h-[2px] mx-1 rounded-full transition-colors ${isPast ? 'bg-[#00D084]' : 'bg-black/10 dark:bg-white/10'}`} />}
+                     </div>
+                 )
+              })}
+           </div>
         </div>
 
         {/* Step 1: 上传图片 */}
         {step === 'upload' && (
           <div className={`p-8 ${styles.card}`} style={{ backgroundColor: config.colors.background }}>
-            <h1 className="mb-2 text-2xl font-bold" style={{ color: config.colors.text }}>{t('uploadTitle')}</h1>
-            <p className="mb-6" style={{ color: config.colors.textMuted }}>{t('uploadDesc')}</p>
-
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed bg-gray-50 py-16 transition-colors hover:bg-gray-100"
-              style={{ borderColor: config.colors.border }}
-            >
-              {uploadedImage ? (
-                <div className="relative group w-full flex justify-center">
-                  <img src={uploadedImage} alt="Uploaded" className="max-h-80 rounded-xl object-contain shadow-md group-hover:scale-[1.02] transition-transform duration-300" />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-xl transition-opacity duration-300">
-                    <span className="text-white font-medium flex items-center gap-2"><Upload className="w-5 h-5"/> Replace Image</span>
-                  </div>
+            {/* 恢复至极简文件上传，并设置严格的高度控制 */}
+            {!uploadedImage ? (
+                <div
+                  className="mt-6 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 transition-colors hover:bg-gray-50/50 cursor-pointer"
+                  style={{ borderColor: config.colors.border }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="mb-4 h-10 w-10 opacity-70" style={{ color: config.colors.primary }} />
+                  <p className="mb-2 text-center font-medium" style={{ color: config.colors.text }}>
+                    {t('uploadTitle') || '点击或拖拽上传图片'}
+                  </p>
+                  <p className="text-center text-xs opacity-60" style={{ color: config.colors.textMuted }}>
+                    {t('uploadFormats') || '支持 JPG, PNG, WEBP (建议竖版)'}
+                  </p>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept="image/jpeg, image/png, image/webp"
+                    className="hidden"
+                  />
                 </div>
-              ) : (
-                <>
-                  <Upload className="mb-4 h-12 w-12" style={{ color: config.colors.textMuted }} />
-                  <p style={{ color: config.colors.textMuted }}>{t('uploadHint')}</p>
-                  <p className="mt-2 text-sm" style={{ color: config.colors.textMuted }}>{t('uploadFormat')}</p>
-                </>
-              )}
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-
-            {uploadedImage && (
-              <button
-                onClick={handleGenerate}
-                className={`mt-6 flex w-full items-center justify-center gap-2 py-3 font-medium ${styles.button}`}
-              >
-                <Sparkles className="h-5 w-5" />
-                {t('generateBtn')}
-              </button>
+            ) : (
+                <div className="mt-8 flex flex-col gap-6 animate-in fade-in zoom-in duration-300">
+                    <div className="w-full max-h-80 overflow-hidden rounded-xl border flex items-center justify-center bg-gray-50/50" style={{ borderColor: config.colors.border }}>
+                        {/* 限制最大高度，防止图片撑满整个屏幕 */}
+                        <img 
+                           src={uploadedImage} 
+                           alt="Preview" 
+                           className="object-contain max-h-[300px] w-auto h-auto rounded-lg" 
+                        />
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-4 w-full">
+                        <button
+                          onClick={() => setUploadedImage(null)}
+                          className="flex-1 rounded-full border py-3.5 text-sm font-medium hover:bg-black/5 transition-all"
+                          style={{ borderColor: config.colors.border, color: config.colors.text }}
+                        >
+                          重新选择
+                        </button>
+                        <button
+                          onClick={() => handleGenerate(uploadedImage)}
+                          className={`flex-[2] flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-all ${styles.button}`}
+                        >
+                          <Sparkles className="h-4 w-4" /> 生成 3D 模型
+                        </button>
+                    </div>
+                </div>
             )}
           </div>
         )}
 
-        {/* Step 2: 生成中 */}
-        {step === 'generate' && (
-          <div className={`p-8 ${styles.card}`} style={{ backgroundColor: config.colors.background }}>
-            <div className="flex flex-col items-center justify-center py-16">
-              <Loader2 className="mb-6 h-16 w-16 animate-spin" style={{ color: config.colors.primary }} />
-              <h2 className="mb-2 text-2xl font-bold" style={{ color: config.colors.text }}>{t('generatingTitle')}</h2>
-              <p style={{ color: config.colors.textMuted }}>{t('generatingDesc')}</p>
-            </div>
+        {/* Step 2: 生成中 (Interactive Multi-View Gallery) */}
+        {step === 'generate' && uploadedImage && (
+          <div className="w-full relative z-20">
+             <FigurineGenerationGallery 
+                subjectImageB64={uploadedImage}
+                initialViews={generatedViews}
+                onCancel={() => {
+                   if (editingVaultAssetId) {
+                      router.push('/profile');
+                      setTimeout(() => resetGenerationFlow(), 100);
+                   } else {
+                      setStep('upload');
+                      setGeneratedImage(null);
+                      setGeneratedViews(null);
+                      setGenerationStatus('idle');
+                      setGalleryStatus('IDLE');
+                   }
+                }}
+                onComplete={(urls: { primary: string, back: string, side: string }, asyncAssetId?: string) => {
+                   setGeneratedImage(urls.primary); 
+                   setGeneratedViews(urls);                   
+                   setGenerationStatus('success');
+                   setStep('select');
+                   setGalleryStatus('COMPLETE');
+                   
+                   // Firewall: Prevent duplicate creation if we are modifying an existing vault asset
+                   if (!editingVaultAssetId) {
+                       // 修复: 彻底切断冗余数据库调用。如果 Gallery 已从后台获取了异步 AssetID，直接绑定！
+                       if (asyncAssetId) {
+                          setEditingVaultAssetId(asyncAssetId);
+                       } else {
+                          // Fallback just in case, though this should rarely hit now.
+                          saveGeneratedAsset({
+                             originalImageB64: uploadedImage,
+                             primaryImageB64: urls.primary,
+                             backImageB64: urls.back,
+                             sideImageB64: urls.side,
+                             prompt: undefined,
+                             baseModelVariantId: selectedVariant?.id
+                          }).then(res => {
+                             if (res.success && res.assetId) {
+                                setEditingVaultAssetId(res.assetId); // Bind session permanently
+                             }
+                          }).catch(console.error);
+                       }
+                   }
+                }}
+                onStatusChange={(status) => {
+                   setGalleryStatus(status);
+                }}
+             />
           </div>
         )}
 
         {/* Step 3: 选择选项 */}
         {step === 'select' && (
           <div className={`p-8 ${styles.card}`} style={{ backgroundColor: config.colors.background }}>
-            <h1 className="mb-2 text-2xl font-bold" style={{ color: config.colors.text }}>{t('chooseOptions')}</h1>
-            <p className="mb-6" style={{ color: config.colors.textMuted }}>{t('uploadDesc')}</p>
-
             {/* 图片预览 */}
             <div className="mb-6 flex justify-center">
               <div className={`relative rounded-xl border p-4`} style={{ borderColor: config.colors.border }}>
-                <img src={generatedImage || uploadedImage || ''} alt="Generated" className="max-h-64 rounded-lg" />
+                {(generatedImage || uploadedImage) && (
+                   <img src={generatedImage || uploadedImage!} alt="Generated" className="max-h-64 rounded-lg object-contain" />
+                )}
                 <div className="absolute bottom-6 left-6 rounded-full bg-black/70 px-3 py-1 text-xs text-white">
                   AI Generated Preview
                 </div>
@@ -426,15 +560,11 @@ export default function CustomizePage() {
 
             <div className="mt-6 flex gap-4">
               <button
-                onClick={() => {
-                  setStep('upload');
-                  setGeneratedImage(null);
-                  setGenerationStatus('idle');
-                }}
-                className="flex-1 rounded-full border py-3 font-medium hover:bg-gray-50"
+                onClick={() => setStep('generate')}
+                className="flex-1 rounded-full border py-3 font-medium hover:bg-gray-50 transition-colors"
                 style={{ borderColor: config.colors.border, color: config.colors.text }}
               >
-                {t('backBtn')}
+                ← {t('backBtn')} (View renders)
               </button>
               <button
                 onClick={() => setStep('confirm')}
@@ -450,22 +580,31 @@ export default function CustomizePage() {
         {/* Step 4: 确认 */}
         {step === 'confirm' && (
           <div className={`p-8 ${styles.card}`} style={{ backgroundColor: config.colors.background }}>
-            <h1 className="mb-2 text-2xl font-bold" style={{ color: config.colors.text }}>{t('confirmTitle')}</h1>
-            <p className="mb-6" style={{ color: config.colors.textMuted }}>{t('confirmDesc')}</p>
+            <div className="mb-6 flex items-start">
+              <button 
+                 onClick={() => setStep('select')} 
+                 className="text-sm font-medium opacity-70 hover:opacity-100 transition-opacity flex items-center gap-1 bg-black/5 dark:bg-white/5 py-1.5 px-3 rounded-md"
+                 style={{ color: config.colors.text }}
+              >
+                 ← 返回修改配置
+              </button>
+            </div>
 
             <div className="grid gap-6 md:grid-cols-2">
               {/* 图片 */}
               <div className="space-y-4">
                 <div className={`rounded-xl border p-4`} style={{ borderColor: config.colors.border }}>
-                  <img src={generatedImage || uploadedImage || ''} alt="Your design" className="w-full rounded-lg" />
+                  {(generatedImage || uploadedImage) && <img src={generatedImage || uploadedImage!} alt="Your design" className="w-full rounded-lg" />}
                 </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: config.colors.backgroundAlt }}>
-                  <h3 className="flex items-center gap-2 font-semibold" style={{ color: config.colors.text }}>
-                    <ImageIcon className="h-4 w-4" />
-                    {t('originalImage')}
-                  </h3>
-                  <img src={uploadedImage || ''} alt="Original" className="mt-2 h-32 w-full rounded-lg object-cover" />
-                </div>
+                {uploadedImage && (
+                   <div className="rounded-xl p-4" style={{ backgroundColor: config.colors.backgroundAlt }}>
+                     <h3 className="flex items-center gap-2 font-semibold" style={{ color: config.colors.text }}>
+                       <ImageIcon className="h-4 w-4" />
+                       {t('originalImage')}
+                     </h3>
+                     <img src={uploadedImage} alt="Original" className="mt-2 h-32 w-full rounded-lg object-cover" />
+                   </div>
+                )}
               </div>
 
               {/* 详情 */}
@@ -501,12 +640,34 @@ export default function CustomizePage() {
                   </ul>
                 </div>
 
-                <button
-                  onClick={handleAddToCart}
-                  className={`flex w-full items-center justify-center gap-2 py-4 text-lg font-medium ${styles.button}`}
-                >
-                  {t('addToCart')}
-                </button>
+                {isAddedToCart ? (
+                    <div className="flex flex-col gap-3 mt-4">
+                        <button
+                          disabled
+                          className={`flex w-full items-center justify-center gap-2 py-4 text-lg font-medium rounded-full bg-[#00D084]/10 text-[#00D084] border border-[#00D084]/20 cursor-default shadow-sm transition-all`}
+                        >
+                          <Check className="w-5 h-5" /> Added to Cart
+                        </button>
+                        <button
+                          onClick={() => {
+                             resetGenerationFlow();
+                             setStep('upload');
+                             setIsAddedToCart(false);
+                          }}
+                          className={`flex w-full items-center justify-center gap-2 py-4 text-lg font-medium border-2 hover:bg-black/5 dark:hover:bg-white/5 transition-all rounded-full`}
+                          style={{ borderColor: config.colors.primary, color: config.colors.primary }}
+                        >
+                          <Sparkles className="w-5 h-5" /> Create Another Figurine
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                      onClick={handleAddToCart}
+                      className={`flex w-full items-center justify-center gap-2 py-4 mt-4 text-lg font-medium ${styles.button}`}
+                    >
+                      {t('addToCart')}
+                    </button>
+                )}
               </div>
             </div>
           </div>

@@ -78,6 +78,7 @@ export const translations = {
     ],
 
     // Customize Page
+    loginRequired: 'Log in or register to initialize the 3D generation pipeline.',
     uploadTitle: 'Upload Your Photo',
     uploadDesc: 'Upload a clear photo of yourself, a pet, or any character you want turned into a figurine',
     uploadHint: 'Click to upload or drag and drop',
@@ -194,6 +195,7 @@ export const translations = {
     ],
 
     // Customize Page
+    loginRequired: '请先登录或注册以初始化 3D 生成流程。',
     uploadTitle: '上传您的照片',
     uploadDesc: '上传您本人、宠物或任意角色的清晰照片',
     uploadHint: '点击上传或拖拽文件',

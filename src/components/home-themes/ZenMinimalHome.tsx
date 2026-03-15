@@ -5,6 +5,7 @@ import { ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
 import { translations } from '@/lib/i18n';
+import { useStore } from '@/lib/store';
 import { ImageSlider } from '@/components/ImageSlider';
 import React, { useState, useEffect } from 'react';
 
@@ -24,6 +25,7 @@ const scenarioImages = [
 
 export default function ZenMinimalHome() {
   const { t: translate, language } = useTranslation();
+  const { resetGenerationFlow } = useStore();
   const { config } = useThemeConfig();
   const [sliderPos, setSliderPos] = useState(50);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -122,7 +124,7 @@ export default function ZenMinimalHome() {
                 {t('heroSubtitle')}
               </p>
 
-              <Link href="/customize" className="group flex items-center gap-6 text-lg text-[#1a202c] hover:text-[#718096] transition-colors relative overflow-hidden pb-4">
+              <Link href="/customize" onClick={() => resetGenerationFlow()} className="group flex items-center gap-6 text-lg text-[#1a202c] hover:text-[#718096] transition-colors relative overflow-hidden pb-4">
                 <span className="font-medium tracking-widest uppercase text-sm">{t('startCustomizing')}</span>
                 <ArrowRight className="w-5 h-5 font-light transform group-hover:translate-x-3 transition-transform duration-700" />
                 <span className="absolute bottom-0 left-0 w-full h-[1px] bg-[#e2e8f0]"></span>
@@ -280,7 +282,7 @@ export default function ZenMinimalHome() {
           <h2 className="text-5xl md:text-[5rem] font-light text-white mb-10 tracking-tight leading-tight hover:opacity-80 transition-opacity duration-1000">{t('ctaTitle')}</h2>
           <p className="text-[#a0aec0] font-light text-xl mb-24 max-w-2xl mx-auto">{t('ctaSubtitle')}</p>
           
-          <Link href="/customize" className="group inline-flex items-center gap-8 text-xl text-white hover:text-[#e2e8f0] transition-colors relative overflow-hidden pb-4">
+          <Link href="/customize" onClick={() => resetGenerationFlow()} className="group inline-flex items-center gap-8 text-xl text-white hover:text-[#e2e8f0] transition-colors relative overflow-hidden pb-4">
             <span className="font-light tracking-widest uppercase text-sm">{t('getStarted')}</span>
             <ArrowRight className="w-6 h-6 font-light transform group-hover:translate-x-4 transition-transform duration-700" />
             <span className="absolute bottom-0 left-0 w-full h-[1px] bg-white/30" />

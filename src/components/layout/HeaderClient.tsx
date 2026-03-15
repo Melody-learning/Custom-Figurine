@@ -20,7 +20,7 @@ interface HeaderClientProps {
 }
 
 export function HeaderClient({ user }: HeaderClientProps) {
-  const { cart, setCartOpen } = useStore();
+  const { cart, setCartOpen, resetGenerationFlow } = useStore();
   const { language, setLanguage, t: translate } = useTranslation();
   const { theme, setTheme, config } = useThemeConfig();
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -33,7 +33,7 @@ export function HeaderClient({ user }: HeaderClientProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b backdrop-blur-md transition-colors bg-opacity-80" style={{ backgroundColor: config.colors.background, borderColor: config.colors.border }}>
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="text-xl font-bold" style={{ color: config.colors.primary }}>
+        <Link href="/" onClick={() => resetGenerationFlow()} className="text-xl font-bold" style={{ color: config.colors.primary }}>
           CustomFigurine
         </Link>
 
@@ -41,7 +41,12 @@ export function HeaderClient({ user }: HeaderClientProps) {
           <Link href="/" className="text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: config.colors.text }}>
             {t('home')}
           </Link>
-          <Link href="/customize" className="text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: config.colors.text }}>
+          <Link 
+            href="/customize" 
+            onClick={() => resetGenerationFlow()} 
+            className="text-sm font-medium hover:opacity-70 transition-opacity" 
+            style={{ color: config.colors.text }}
+          >
             {t('customize')}
           </Link>
 

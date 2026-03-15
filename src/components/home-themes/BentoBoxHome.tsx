@@ -5,6 +5,7 @@ import { ArrowRight, Star, ArrowUpRight, Check, Sparkles, ChevronDown, ChevronUp
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
 import { translations } from '@/lib/i18n';
+import { useStore } from '@/lib/store';
 import { ImageSlider } from '@/components/ImageSlider';
 import React, { useState } from 'react';
 
@@ -24,6 +25,7 @@ const scenarioImages = [
 
 export default function BentoBoxHome() {
   const { t: translate, language } = useTranslation();
+  const { resetGenerationFlow } = useStore();
   const { config } = useThemeConfig();
   const [sliderPos, setSliderPos] = useState(50);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -113,7 +115,7 @@ export default function BentoBoxHome() {
                 </p>
               </div>
               
-              <Link href="/customize" className="inline-flex items-center justify-between w-full md:w-auto px-8 py-5 bg-white text-black rounded-[1.5rem] font-semibold text-lg hover:bg-gray-100 transition-all hover:pr-4 group/btn shadow-[0_4px_20px_rgba(255,255,255,0.3)]">
+              <Link href="/customize" onClick={() => resetGenerationFlow()} className="inline-flex items-center justify-between w-full md:w-auto px-8 py-5 bg-white text-black rounded-[1.5rem] font-semibold text-lg hover:bg-gray-100 transition-all hover:pr-4 group/btn shadow-[0_4px_20px_rgba(255,255,255,0.3)]">
                 <span>{t('startCustomizing')}</span>
                 <div className="bg-black text-white p-2 rounded-full transform group-hover/btn:rotate-45 transition-transform duration-300 ml-4">
                   <ArrowUpRight className="w-5 h-5" />
@@ -229,7 +231,7 @@ export default function BentoBoxHome() {
                 </div>
               ))}
             </div>
-            <Link href="/customize" className="mt-12 inline-block text-blue-400 font-bold hover:text-blue-300 relative z-10 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-px after:bg-blue-400 hover:after:w-0 after:transition-all after:duration-300 pb-1">
+            <Link href="/customize" onClick={() => resetGenerationFlow()} className="mt-12 inline-block text-blue-400 font-bold hover:text-blue-300 relative z-10 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-px after:bg-blue-400 hover:after:w-0 after:transition-all after:duration-300 pb-1">
               View Full Process →
             </Link>
           </div>
@@ -273,7 +275,7 @@ export default function BentoBoxHome() {
             <h2 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight drop-shadow-sm">{t('ctaTitle')}</h2>
             <p className="text-xl md:text-2xl text-blue-100 mb-12 max-w-2xl mx-auto font-light bg-black/10 rounded-full inline-block px-8 py-3 backdrop-blur-sm border border-white/10">{t('ctaSubtitle')}</p>
             <br/>
-            <Link href="/customize" className="inline-flex items-center gap-4 px-10 py-5 bg-white text-blue-600 rounded-full font-bold text-xl hover:bg-gray-100 transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.4)]">
+            <Link href="/customize" onClick={() => resetGenerationFlow()} className="inline-flex items-center gap-4 px-10 py-5 bg-white text-blue-600 rounded-full font-bold text-xl hover:bg-gray-100 transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.4)]">
               {t('getStarted')} <ArrowRight className="w-6 h-6 animate-pulse" />
             </Link>
           </div>

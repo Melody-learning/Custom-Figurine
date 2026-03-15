@@ -5,6 +5,7 @@ import { ArrowRight, Sparkles, Check, ChevronDown, ChevronUp } from 'lucide-reac
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
 import { translations } from '@/lib/i18n';
+import { useStore } from '@/lib/store';
 import { ImageSlider } from '@/components/ImageSlider';
 import React, { useState } from 'react';
 
@@ -24,6 +25,7 @@ const scenarioImages = [
 
 export default function GlassmorphismHome() {
   const { t: translate, language } = useTranslation();
+  const { resetGenerationFlow } = useStore();
   const { config } = useThemeConfig();
   const [sliderPos, setSliderPos] = useState(50);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -126,7 +128,7 @@ export default function GlassmorphismHome() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-6 mt-4 w-full sm:w-auto animate-fade-in" style={{ animationDelay: '0.6s' }}>
-                <Link href="/customize" className="relative group overflow-hidden px-10 py-5 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/80 shadow-[0_8px_32px_0_rgba(31,38,135,0.1)] hover:shadow-[0_12px_40px_0_rgba(31,38,135,0.2)] hover:-translate-y-1 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3 w-full sm:w-auto text-lg font-semibold text-gray-900 before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/50 before:to-transparent before:-translate-x-[200%] hover:before:animate-[shimmer_1.5s_infinite]">
+                <Link href="/customize" onClick={() => resetGenerationFlow()} className="relative group overflow-hidden px-10 py-5 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/80 shadow-[0_8px_32px_0_rgba(31,38,135,0.1)] hover:shadow-[0_12px_40px_0_rgba(31,38,135,0.2)] hover:-translate-y-1 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3 w-full sm:w-auto text-lg font-semibold text-gray-900 before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/50 before:to-transparent before:-translate-x-[200%] hover:before:animate-[shimmer_1.5s_infinite]">
                   <span className="relative z-10 flex items-center gap-3">
                     {t('startCustomizing')} <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                   </span>
@@ -297,7 +299,7 @@ export default function GlassmorphismHome() {
               {t('ctaSubtitle')}
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-6 relative z-10">
-              <Link href="/customize" className="relative overflow-hidden px-14 py-6 rounded-full bg-gradient-to-r from-gray-900 to-gray-800 text-white shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-4 text-xl font-semibold before:absolute before:inset-0 before:bg-white/20 before:-translate-x-[200%] hover:before:animate-[shimmer_1.5s_infinite]">
+              <Link href="/customize" onClick={() => resetGenerationFlow()} className="relative overflow-hidden px-14 py-6 rounded-full bg-gradient-to-r from-gray-900 to-gray-800 text-white shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-4 text-xl font-semibold before:absolute before:inset-0 before:bg-white/20 before:-translate-x-[200%] hover:before:animate-[shimmer_1.5s_infinite]">
                 <span className="relative z-10 flex items-center gap-3">
                   {t('getStarted')} <ArrowRight className="w-6 h-6 animate-pulse" />
                 </span>

@@ -6,6 +6,7 @@ import { PackageOpen, Sparkles, LogOut, Loader2 } from "lucide-react";
 import { logoutUser } from "@/app/actions/auth";
 import type { GeneratedAsset, StoreOrder } from "@prisma/client";
 import { DynamicCouponCard } from "@/components/marketing/DynamicCouponCard";
+import GenerationVaultList from '@/components/profile/GenerationVaultList';
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -35,11 +36,11 @@ export default async function ProfilePage() {
   const hasImage = !!session.user.image;
 
   return (
-    <div className="min-h-screen bg-[var(--background)] pt-24 pb-12 px-6">
-      <div className="max-w-7xl mx-auto space-y-12">
+    <div className="min-h-[calc(100vh-80px)] bg-[var(--background)] pt-20 pb-8 px-6">
+      <div className="max-w-7xl mx-auto space-y-10">
         
         {/* Profile Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-8 border-b border-[var(--border-subtle)]">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-[var(--border-subtle)]">
           <div className="flex items-center gap-6">
              {hasImage ? (
                 <div className="relative w-20 h-20 rounded-full overflow-hidden bg-[var(--surface-sunken)] ring-2 ring-[var(--brand-primary)] p-1">
@@ -74,39 +75,10 @@ export default async function ProfilePage() {
           <DynamicCouponCard />
         )}
 
-        {/* Dashboards Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        {/* Dashboards Stack */}
+        <div className="flex flex-col gap-8">
            
-           {/* Left Col: AI Gallery */}
-           <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                 <div className="p-2 rounded-lg bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
-                    <Sparkles className="w-5 h-5" />
-                 </div>
-                 <h2 className="text-2xl font-bold text-[var(--text-primary)]">Your Generation Vault</h2>
-              </div>
-              
-              {generatedAssets.length === 0 ? (
-                 <div className="w-full flex flex-col items-center justify-center p-12 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-sunken)]">
-                    <Sparkles className="w-8 h-8 text-[var(--text-tertiary)] mb-4 opacity-50" />
-                    <p className="text-[var(--text-secondary)] text-center">Your vault is empty.<br/>Go unleash your creativity in the Customizer.</p>
-                 </div>
-              ) : (
-                 <div className="grid grid-cols-2 gap-4">
-                    {generatedAssets.map((asset: GeneratedAsset) => (
-                       <div key={asset.id} className="group relative aspect-square rounded-2xl overflow-hidden bg-[var(--surface-sunken)] border border-[var(--border-subtle)] hover:border-[var(--brand-primary)]/50 transition-colors">
-                          <Image src={asset.resultImage} alt="Generated Asset" fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <p className="text-xs text-white/80 truncate">{asset.prompt || "Custom Model"}</p>
-                             <p className="text-[10px] text-white/50">{new Date(asset.createdAt).toLocaleDateString()}</p>
-                          </div>
-                       </div>
-                    ))}
-                 </div>
-              )}
-           </div>
-
-           {/* Right Col: Orders Tracking */}
+           {/* Top Section: Orders Tracking */}
            <div className="space-y-6">
                <div className="flex items-center gap-3">
                  <div className="p-2 rounded-lg bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]">
@@ -116,14 +88,14 @@ export default async function ProfilePage() {
               </div>
               
               {physicalOrders.length === 0 ? (
-                 <div className="w-full flex flex-col items-center justify-center p-12 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-sunken)]">
-                    <PackageOpen className="w-8 h-8 text-[var(--text-tertiary)] mb-4 opacity-50" />
-                    <p className="text-[var(--text-secondary)] text-center">No orders placed yet.<br/>Your figures are waiting to be birthed.</p>
+                 <div className="w-full flex flex-col items-center justify-center p-8 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-sunken)]">
+                    <PackageOpen className="w-6 h-6 text-[var(--text-tertiary)] mb-3 opacity-50" />
+                    <p className="text-[var(--text-secondary)] text-center text-sm">No orders placed yet. Your figures are waiting to be birthed.</p>
                  </div>
               ) : (
-                 <div className="space-y-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {physicalOrders.map((order: StoreOrder) => (
-                       <div key={order.id} className="p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] flex flex-col gap-4">
+                       <div key={order.id} className="p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] flex flex-col gap-4 shadow-sm">
                           <div className="flex items-center justify-between">
                              <span className="text-sm font-mono text-[var(--text-secondary)]">#{order.shopifyOrderId.slice(-6)}</span>
                              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${order.status === 'placed' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}>
@@ -148,6 +120,18 @@ export default async function ProfilePage() {
                     ))}
                  </div>
               )}
+           </div>
+
+           {/* Bottom Section: AI Gallery */}
+           <div className="space-y-4 w-full">
+              <div className="flex items-center gap-3">
+                 <div className="p-2 rounded-lg bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
+                     <Sparkles className="w-5 h-5" />
+                 </div>
+                 <h2 className="text-2xl font-bold text-[var(--text-primary)]">Your Generation Vault</h2>
+              </div>
+              
+              <GenerationVaultList initialAssets={generatedAssets as any} />
            </div>
 
         </div>

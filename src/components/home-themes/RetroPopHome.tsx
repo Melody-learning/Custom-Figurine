@@ -5,6 +5,7 @@ import { ArrowRight, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
 import { translations } from '@/lib/i18n';
+import { useStore } from '@/lib/store';
 import { ImageSlider } from '@/components/ImageSlider';
 import React, { useState } from 'react';
 
@@ -24,6 +25,7 @@ const scenarioImages = [
 
 export default function RetroPopHome() {
   const { t: translate, language } = useTranslation();
+  const { resetGenerationFlow } = useStore();
   const { config } = useThemeConfig();
   const [sliderPos, setSliderPos] = useState(50);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -140,7 +142,7 @@ export default function RetroPopHome() {
                 </div>
                 
                 <div className="flex flex-wrap gap-6 mt-8">
-                  <Link href="/customize" className="px-10 py-6 text-2xl font-black uppercase text-white bg-[#ff3366] border-4 border-black hover:-translate-y-2 hover:-translate-x-2 shadow-[8px_8px_0_0_rgba(0,0,0,1)] hover:shadow-[16px_16px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-4 group/btn">
+                  <Link href="/customize" onClick={() => resetGenerationFlow()} className="px-10 py-6 text-2xl font-black uppercase text-white bg-[#ff3366] border-4 border-black hover:-translate-y-2 hover:-translate-x-2 shadow-[8px_8px_0_0_rgba(0,0,0,1)] hover:shadow-[16px_16px_0_0_rgba(0,0,0,1)] transition-all flex items-center gap-4 group/btn">
                     {t('startCustomizing')} <ArrowRight className="w-8 h-8 group-hover/btn:translate-x-4 transition-transform" />
                   </Link>
                 </div>
@@ -292,7 +294,7 @@ export default function RetroPopHome() {
             </p>
             
             <div className="mt-8">
-              <Link href="/customize" className="px-16 py-8 text-4xl font-black uppercase text-black bg-[#ff3366] border-8 border-white hover:bg-[#00c3ff] hover:scale-110 shadow-[16px_16px_0_0_white] hover:shadow-[0_0_0_0_white] hover:translate-x-4 hover:translate-y-4 transition-all inline-flex items-center gap-6 group/btn">
+              <Link href="/customize" onClick={() => resetGenerationFlow()} className="px-16 py-8 text-4xl font-black uppercase text-black bg-[#ff3366] border-8 border-white hover:bg-[#00c3ff] hover:scale-110 shadow-[16px_16px_0_0_white] hover:shadow-[0_0_0_0_white] hover:translate-x-4 hover:translate-y-4 transition-all inline-flex items-center gap-6 group/btn">
                 {t('getStarted')} <ArrowRight className="w-12 h-12 group-hover/btn:translate-x-4 transition-transform" />
               </Link>
             </div>

@@ -1,3 +1,8 @@
+---
+title: 纯前端零成本主体提取流水线 (Gemini 3.1 + WebAI SAM)
+status: ARCHIVED / PIVOTED
+date: 2026-03-14
+---
 # 提案：纯前端零成本主体提取流水线 (Gemini 3.1 + WebAI SAM)
 
 ## 1. 背景与意图 (Context & Intent)
@@ -47,4 +52,9 @@
 - [ ] 提出中 (Draft)
 - [ ] 用户已审查并同意 Specs 修改 (Specs Approved)
 - [ ] 代码实施完成待验收 (Implemented)
-- [ ] **完成闭环 (Done)**
+- [x] **已归档/功能降级作废 (Archived / Pivoted)**
+
+---
+## 实施结果 (Resolution)
+**状态**: 🚫 已废弃并回退。
+**备注**: 此方案在实施第三、第四阶段时，遭遇了 `@xenova/transformers` 的 WASM 包在 Next.js Turbopack 编译超时的致命阻击。同时测试证实了浏览器原生加载百兆大模型进行高斯剪裁会严重拖卡主线程，导致移动端可用性极差。最终团队决策放弃纯前端像素抠图路线，降维打击换成了原图直接带彩色虚线框裁切传递的朴素方案。方案 C 探索正式终结。

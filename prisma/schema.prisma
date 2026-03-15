@@ -84,13 +84,22 @@ model VerificationToken {
 // CUSTOM BUSINESS MODELS
 // ==============
 
+enum GenerationStatus {
+  PENDING
+  COMPLETE
+  FAILED
+}
+
 model GeneratedAsset {
   id                 String   @id @default(cuid())
   userId             String
   originalImage      String?  @db.Text
-  resultImage        String   @db.Text
+  resultImage        String?  @db.Text
+  backImage          String?  @db.Text
+  sideImage          String?  @db.Text
   prompt             String?  @db.Text
   baseModelVariantId String?
+  status             GenerationStatus @default(COMPLETE) // Default true for legacy, handled in code
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

@@ -12,6 +12,8 @@ import { auth } from "@/auth";
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
+import { LoginModal } from "@/components/auth/LoginModal";
+
 export const metadata: Metadata = {
   title: "Custom Figurine - Personalized 3D Prints",
   description: "Upload your image and create custom 3D figurines",
@@ -34,6 +36,7 @@ export default async function RootLayout({
           <Footer />
           <CartSidebar />
           {!session && <WelcomeModal />}
+          <LoginModal />
         </Providers>
         <Toaster position="bottom-left" theme="dark" richColors />
       </body>

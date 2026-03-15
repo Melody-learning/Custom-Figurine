@@ -5,6 +5,7 @@ import { ArrowRight, Sparkles, Check, ChevronDown, ChevronUp } from 'lucide-reac
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
 import { translations } from '@/lib/i18n';
+import { useStore } from '@/lib/store';
 import { ImageSlider } from '@/components/ImageSlider';
 import React, { useState } from 'react';
 
@@ -24,6 +25,7 @@ const scenarioImages = [
 
 export default function CyberpunkHome() {
   const { t: translate, language } = useTranslation();
+  const { resetGenerationFlow } = useStore();
   const { config } = useThemeConfig();
   const [sliderPos, setSliderPos] = useState(50);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -122,7 +124,7 @@ export default function CyberpunkHome() {
               </p>
 
               <div className="mt-8 flex flex-col sm:flex-row gap-6 animate-fade-in" style={{ animationDelay: '0.6s' }}>
-                <Link href="/customize" className="relative group overflow-hidden px-8 py-4 font-bold tracking-widest text-[#090a0f] bg-[#f3e600] flex items-center justify-center gap-2 hover:bg-[#ff003c] hover:text-white hover:border-[#ff003c] border-2 border-[#f3e600] transition-colors shadow-[0_0_15px_rgba(243,230,0,0.5)]">
+                <Link href="/customize" onClick={() => resetGenerationFlow()} className="relative group overflow-hidden px-8 py-4 font-bold tracking-widest text-[#090a0f] bg-[#f3e600] flex items-center justify-center gap-2 hover:bg-[#ff003c] hover:text-white hover:border-[#ff003c] border-2 border-[#f3e600] transition-colors shadow-[0_0_15px_rgba(243,230,0,0.5)]">
                   <span className="relative z-10 flex items-center gap-2">
                     {t('startCustomizing')} <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
                   </span>
@@ -308,7 +310,7 @@ export default function CyberpunkHome() {
           </div>
           
           <br/>
-          <Link href="/customize" className="inline-flex items-center gap-4 px-12 py-6 bg-black text-[#00f0ff] font-bold tracking-widest text-xl border-4 border-black hover:bg-[#f3e600] border-transparent hover:text-black hover:border-black transition-all shadow-[8px_8px_0_0_rgba(0,240,255,1)] hover:shadow-[0_0_30px_rgba(243,230,0,1)]">
+          <Link href="/customize" onClick={() => resetGenerationFlow()} className="inline-flex items-center gap-4 px-12 py-6 bg-black text-[#00f0ff] font-bold tracking-widest text-xl border-4 border-black hover:bg-[#f3e600] border-transparent hover:text-black hover:border-black transition-all shadow-[8px_8px_0_0_rgba(0,240,255,1)] hover:shadow-[0_0_30px_rgba(243,230,0,1)]">
             EXECUTE ORDER / {t('getStarted')} 
             <ArrowRight className="w-6 h-6 animate-pulse" />
           </Link>

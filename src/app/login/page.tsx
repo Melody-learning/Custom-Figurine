@@ -32,7 +32,7 @@ export default function LoginPage() {
         // Manually handle the redirect since we disabled it on the server action
         router.push(result.url);
       } else if (result?.success) {
-        toast.success("Magic link sent!");
+        toast.success("Magic link sent! Please check your email to claim the offer.");
         router.push("/login/verify-request");
       }
     } catch (err: any) {
