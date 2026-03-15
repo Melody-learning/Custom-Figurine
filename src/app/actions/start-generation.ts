@@ -58,13 +58,23 @@ export async function startAsyncGeneration(payload: StartGenerationPayload) {
     // 3. Fire the Webhook to process in the background.
     // In Vercel, un-awaited promises are immediately killed when the response returns.
     // We MUST use waitUntil() to keep the container execution context alive just long enough to dispatch the fetch.
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
     
+    // Robust URL resolution: prioritize Production Domain to bypass Preview Password Protections naturally
+    const vercelProdUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null;
+    const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || vercelProdUrl || vercelUrl || 'http://localhost:3000';
+    
+    // Inject bypass token in case the environment strictly forces Vercel Authentication
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
+       headers['x-vercel-protection-bypass'] = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+    }
+
     // We don't await the fetch so the UI unblocks instantly, but we tell Vercel to wait for its network dispatch to complete.
     waitUntil(
       fetch(`${baseUrl}/api/webhooks/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ 
            assetId: asset.id, 
            modelId: payload.modelId,
