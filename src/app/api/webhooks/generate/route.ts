@@ -27,12 +27,16 @@ async function uploadBase64ToBlob(base64Str: string, prefix: string): Promise<st
 }
 
 export async function POST(req: Request) {
+  let assetIdToFail = '';
+  
   try {
     const { assetId, modelId, originalImageUrl } = await req.json();
 
     if (!assetId || !modelId || !originalImageUrl) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+    
+    assetIdToFail = assetId;
 
     console.log(`[Webhook:Generate] Starting async job for asset ${assetId}`);
 
@@ -82,8 +86,18 @@ export async function POST(req: Request) {
     console.error(`[Webhook:Generate] FATAL ERROR:`, error);
     
     // Attempt to mark FAILED in DB if we extracted assetId originally
-    // Notice: req.json() cannot be read twice, so if it crashed early, assetId might be missing in this scope.
-    // For simplicity, we assume error happened after destructive assignments.
+    if (assetIdToFail) {
+       try {
+          await prisma.generatedAsset.update({
+             where: { id: assetIdToFail },
+             data: { status: 'FAILED' }
+          });
+          console.log(`[Webhook:Generate] Marked asset ${assetIdToFail} as FAILED in database`);
+       } catch (dbError) {
+          console.error(`[Webhook:Generate] Failed to update DB status for ${assetIdToFail}:`, dbError);
+       }
+    }
+
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
