@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hero Layout Guide</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #f5f5f5; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; }
+  
+  .wrapper { position: relative; padding: 50px 90px 30px 30px; }
+  
+  .canvas {
+    position: relative;
+    width: 1280px;
+    height: 480px;
+    background: #fff;
+    border: 2px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* 蓝色文字遮盖区 0~40% */
+  .zone-text {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 40%;
+    background: rgba(50, 100, 220, 0.25);
+    border-right: 3px dashed rgba(50, 100, 220, 0.7);
+    display: flex; justify-content: center; align-items: center;
+  }
+  .zone-text span {
+    color: rgba(50, 100, 220, 0.9);
+    font-size: 28px; font-weight: 900;
+    text-align: center; line-height: 1.6;
+  }
+
+  /* 绿色主体区域 50%~90%, 垂直 5%~80% */
+  .zone-subject {
+    position: absolute;
+    left: 50%; top: 5%;
+    width: 40%; height: 75%;
+    background: rgba(40, 167, 70, 0.35);
+    border: 4px solid rgba(40, 167, 70, 0.8);
+    border-radius: 16px;
+    display: flex; justify-content: center; align-items: center;
+  }
+  .zone-subject span {
+    color: rgba(30, 130, 50, 1);
+    font-size: 28px; font-weight: 900;
+    text-align: center; line-height: 1.6;
+  }
+
+  /* 橙色底部缩略图区 */
+  .zone-thumb {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 18%;
+    background: rgba(255, 140, 0, 0.2);
+    border-top: 3px dashed rgba(255, 140, 0, 0.7);
+    display: flex; justify-content: center; align-items: center;
+  }
+  .zone-thumb span {
+    color: rgba(200, 100, 0, 0.9);
+    font-size: 18px; font-weight: 800;
+  }
+
+  /* 百分比标签 */
+  .pct {
+    position: absolute; top: -2px;
+    transform: translateX(-50%);
+    font-size: 16px; font-weight: 800;
+    color: #fff; background: #333;
+    padding: 4px 12px; border-radius: 0 0 6px 6px;
+    z-index: 10;
+  }
+  .pct-0 { left: 0; transform: none; border-radius: 0 0 6px 0; }
+  .pct-40 { left: 40%; color: #3264dc; background: #e8eeff; }
+  .pct-50 { left: 50%; color: #28a746; background: #e6f7ea; }
+  .pct-90 { left: 90%; color: #28a746; background: #e6f7ea; }
+  .pct-100 { right: 0; left: auto; transform: none; border-radius: 0 0 0 6px; }
+
+  /* 竖线 at 50% and 90% */
+  .vline-50 {
+    position: absolute; left: 50%; top: 0; bottom: 0;
+    border-left: 2px dashed rgba(40, 167, 70, 0.4);
+  }
+  .vline-90 {
+    position: absolute; left: 90%; top: 0; bottom: 0;
+    border-left: 2px dashed rgba(40, 167, 70, 0.4);
+  }
+
+  /* 尺寸标注 */
+  .dim-top {
+    position: absolute; top: -35px; left: 0; right: 0;
+    display: flex; align-items: center;
+    color: #333; font-size: 16px; font-weight: 800;
+  }
+  .dim-top::before, .dim-top::after {
+    content: ''; flex: 1; height: 2px; background: #333;
+  }
+  .dim-top span { padding: 0 12px; white-space: nowrap; }
+
+  .dim-right {
+    position: absolute; top: 0; bottom: 0; right: -70px;
+    display: flex; flex-direction: column; align-items: center;
+    color: #333; font-size: 16px; font-weight: 800; width: 50px;
+  }
+  .dim-right::before, .dim-right::after {
+    content: ''; width: 2px; flex: 1; background: #333;
+  }
+  .dim-right span { padding: 6px 0; white-space: nowrap; }
+
+  .note {
+    margin-top: 16px; color: #666; font-size: 14px; text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="canvas">
+      <!-- 百分比标签 -->
+      <div class="pct pct-0">0%</div>
+      <div class="pct pct-40">40%</div>
+      <div class="pct pct-50">50%</div>
+      <div class="pct pct-90">90%</div>
+      <div class="pct pct-100">100%</div>
+
+      <!-- 辅助竖线 -->
+      <div class="vline-50"></div>
+      <div class="vline-90"></div>
+
+      <!-- 蓝色文字区 -->
+      <div class="zone-text"><span>文字遮盖区<br>TEXT ZONE<br>0% ~ 40%</span></div>
+
+      <!-- 绿色主体区 -->
+      <div class="zone-subject"><span>3D 手办主体<br>SUBJECT<br>放在这个区域<br>50% ~ 90%</span></div>
+
+      <!-- 橙色底栏 -->
+      <div class="zone-thumb"><span>缩略图 + 渐变遮罩区 THUMBNAIL BAR（底部 18%）</span></div>
+
+      <!-- 尺寸标注 -->
+      <div class="dim-top"><span>2560 px</span></div>
+      <div class="dim-right"><span>960px</span></div>
+    </div>
+    <div class="note">※ 比例 8:3 · 绿色区域 = 3D手办主体位置 · 蓝色区域 = 被文字+渐变遮盖 · 橙色 = 被缩略图遮盖</div>
+  </div>
+</body>
+</html>
