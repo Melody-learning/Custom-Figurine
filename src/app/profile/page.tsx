@@ -2,11 +2,11 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { PackageOpen, Sparkles, LogOut, Loader2 } from "lucide-react";
-import { logoutUser } from "@/app/actions/auth";
+import { PackageOpen, Sparkles, Loader2 } from "lucide-react";
 import type { GeneratedAsset, StoreOrder } from "@prisma/client";
 import { DynamicCouponCard } from "@/components/marketing/DynamicCouponCard";
 import GenerationVaultList from '@/components/profile/GenerationVaultList';
+import LogoutButton from '@/components/profile/LogoutButton';
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -62,12 +62,7 @@ export default async function ProfilePage() {
                 <p className="text-[var(--text-secondary)]">{session.user.email}</p>
              </div>
           </div>
-          <form action={logoutUser}>
-             <button type="submit" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-subtle)] hover:border-red-500/50 hover:text-red-500 text-[var(--text-secondary)] font-medium transition-colors text-sm cursor-pointer">
-                <LogOut className="w-4 h-4" />
-                Sign Out
-             </button>
-          </form>
+          <LogoutButton />
         </div>
 
         {/* Coupon Asset Wall */}

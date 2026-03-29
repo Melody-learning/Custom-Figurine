@@ -7,6 +7,7 @@ import { waitUntil } from '@vercel/functions';
 
 interface StartGenerationPayload {
   originalImageB64: string;
+  processedImageB64?: string; // 抠图后的图片 base64（可选）
   modelId: string;
   baseModelVariantId?: string;
   prompt?: string;
@@ -26,6 +27,53 @@ export async function startAsyncGeneration(payload: StartGenerationPayload) {
 
     const userId = session.user.id;
 
+    // === Quota Check (with pessimistic lock to prevent race conditions) ===
+    const quotaResult = await prisma.$transaction(async (tx) => {
+      // Lock user row to prevent concurrent checks from both passing
+      const [userRow] = await tx.$queryRawUnsafe<any[]>(
+        `SELECT "isWhitelisted", "maxConcurrentJobs", "maxTotalGenerations" FROM "User" WHERE id = $1 FOR UPDATE`,
+        userId
+      );
+
+      if (!userRow) {
+        return { pass: false, reason: 'user_not_found' } as const;
+      }
+
+      // Concurrent check applies to ALL users (including whitelist)
+      const activeJobs = await tx.generatedAsset.count({
+        where: { userId, status: 'PENDING' },
+      });
+      if (activeJobs >= userRow.maxConcurrentJobs) {
+        return {
+          pass: false,
+          reason: 'CONCURRENT_LIMIT',
+          active: activeJobs,
+          max: userRow.maxConcurrentJobs,
+        } as const;
+      }
+
+      // Total limit only applies to non-whitelisted users
+      if (!userRow.isWhitelisted) {
+        const totalUsed = await tx.generatedAsset.count({
+          where: { userId, status: { in: ['PENDING', 'COMPLETE'] } },
+        });
+        if (totalUsed >= userRow.maxTotalGenerations) {
+          return {
+            pass: false,
+            reason: 'LIMIT_REACHED',
+            used: totalUsed,
+            max: userRow.maxTotalGenerations,
+          } as const;
+        }
+      }
+
+      return { pass: true } as const;
+    });
+
+    if (!quotaResult.pass) {
+      return { success: false, ...quotaResult };
+    }
+
     // 1. Convert the heavy input Base64 into a CDN URL for safe DB storage
     let buffer: Buffer;
     let contentType = 'image/jpeg';
@@ -44,7 +92,28 @@ export async function startAsyncGeneration(payload: StartGenerationPayload) {
       contentType,
     });
 
-    // 2. Insert PENDING record
+    // 2. If processed image (bg-removed) is provided, upload it too
+    let processedBlobUrl: string | null = null;
+    if (payload.processedImageB64) {
+      let procBuffer: Buffer;
+      let procContentType = 'image/png';
+      if (payload.processedImageB64.startsWith('data:')) {
+        const procParts = payload.processedImageB64.split(';');
+        procContentType = procParts[0].split(':')[1] || procContentType;
+        const procRawData = procParts[1].split(',')[1];
+        procBuffer = Buffer.from(procRawData, 'base64');
+      } else {
+        procBuffer = Buffer.from(payload.processedImageB64, 'base64');
+      }
+      const procFilename = `processed-${userId}-${Date.now()}.png`;
+      const procBlob = await put(`vault/${procFilename}`, procBuffer, {
+        access: 'public',
+        contentType: procContentType,
+      });
+      processedBlobUrl = procBlob.url;
+    }
+
+    // 3. Insert PENDING record
     const asset = await prisma.generatedAsset.create({
       data: {
         userId,
@@ -55,22 +124,16 @@ export async function startAsyncGeneration(payload: StartGenerationPayload) {
       }
     });
 
-    // 3. Fire the Webhook to process in the background.
-    // In Vercel, un-awaited promises are immediately killed when the response returns.
-    // We MUST use waitUntil() to keep the container execution context alive just long enough to dispatch the fetch.
-    
-    // Robust URL resolution: prioritize Production Domain to bypass Preview Password Protections naturally
+    // 4. Fire the Webhook to process in the background.
     const vercelProdUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null;
     const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || vercelProdUrl || vercelUrl || 'http://localhost:3000';
     
-    // Inject bypass token in case the environment strictly forces Vercel Authentication
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
        headers['x-vercel-protection-bypass'] = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
     }
 
-    // We don't await the fetch so the UI unblocks instantly, but we tell Vercel to wait for its network dispatch to complete.
     waitUntil(
       fetch(`${baseUrl}/api/webhooks/generate`, {
         method: 'POST',
@@ -78,7 +141,8 @@ export async function startAsyncGeneration(payload: StartGenerationPayload) {
         body: JSON.stringify({ 
            assetId: asset.id, 
            modelId: payload.modelId,
-           originalImageUrl: blob.url
+           originalImageUrl: blob.url,
+           processedImageUrl: processedBlobUrl
         })
       }).then(res => {
          if (!res.ok) console.error(`[StartAsyncGeneration] Webhook fetch error: ${res.status} ${res.statusText}`);

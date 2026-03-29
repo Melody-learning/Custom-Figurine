@@ -25,45 +25,34 @@ const SCENES: SceneData[] = [
     id: 0,
     tag: "Children's Doodles",
     title: 'Doodles Come Alive',
-    titleZh: '\u6d82\u9e26\u6210\u771f',
-    description: "Turn your child's wildest drawings into tangible, one-of-a-kind figurines \u2014 a childhood memory you can hold.",
-    descriptionZh: '\u5c06\u5b69\u5b50\u4eec\u5929\u9a6c\u884c\u7a7a\u7684\u753b\u4f5c\uff0c\u5316\u4e3a\u89e6\u624b\u53ef\u53ca\u7684\u7ae5\u5e74\u7eaa\u5ff5\u3002',
-    image: '/images/hero/doodle.png',
-    thumb: '/images/hero/doodle.png',
+    titleZh: '涂鸦成真',
+    description: "Turn your child's wildest drawings into tangible, one-of-a-kind figurines — a childhood memory you can hold.",
+    descriptionZh: '将孩子们天马行空的画作，化为触手可及的童年纪念。',
+    image: '/images/hero/image/tongzhen-bg.jpg',
+    thumb: '/images/hero/image/tongzhen-thumb.jpg',
     accent: 'from-amber-500/20 via-orange-400/10 to-transparent',
   },
   {
     id: 1,
-    tag: 'Special Gifts',
-    title: 'One-of-a-Kind Gifts',
-    titleZh: '\u4e13\u5c5e\u793c\u7269',
-    description: "Create a truly unique figurine for someone special \u2014 freeze that heartfelt moment in 3D forever.",
-    descriptionZh: '\u4e3a\u5fc3\u7231\u7684\u4eba\u5b9a\u5236\u72ec\u4e00\u65e0\u4e8c\u7684\u4e13\u5c5e\u5f62\u8c61\uff0c\u5b9a\u683c\u611f\u52a8\u77ac\u95f4\u3002',
-    image: '/images/hero/gift.png',
-    thumb: '/images/hero/gift.png',
+    tag: 'Portrait Figurines',
+    title: 'Your Photo, Your Figurine',
+    titleZh: '真人手办',
+    description: "Upload a photo of yourself or someone special — we'll turn it into a stunning, museum-quality collectible.",
+    descriptionZh: '上传一张照片，我们将它变成博物馆级别的精致收藏品。',
+    image: '/images/hero/image/zhenren-bg.jpg',
+    thumb: '/images/hero/image/zhenren-thumb.jpg',
     accent: 'from-pink-500/20 via-rose-400/10 to-transparent',
   },
   {
     id: 2,
     tag: 'Game Characters',
     title: 'Level-Up to Reality',
-    titleZh: '\u6e38\u620f\u89d2\u8272\u73b0\u5b9e\u5316',
-    description: "Bring your legendary in-game avatar to your desktop \u2014 every armor detail, perfectly replicated.",
-    descriptionZh: '\u628a\u4f60\u5728\u865a\u62df\u4e16\u754c\u4e2d\u7684\u65e0\u654c\u795e\u88c5\u89d2\u8272\uff0c\u5b8c\u7f8e\u590d\u73b0\u5230\u73b0\u5b9e\u684c\u9762\u3002',
-    image: '/images/hero/game.png',
-    thumb: '/images/hero/game.png',
+    titleZh: '游戏角色现实化',
+    description: "Bring your legendary in-game avatar to your desktop — every armor detail, perfectly replicated.",
+    descriptionZh: '把你在虚拟世界中的无敌神装角色，完美复现到现实桌面。',
+    image: '/images/hero/image/youxi-bg.jpg',
+    thumb: '/images/hero/image/youxi-thumb.jpg',
     accent: 'from-violet-500/20 via-purple-400/10 to-transparent',
-  },
-  {
-    id: 3,
-    tag: 'Commemorative Moments',
-    title: 'Memories in 3D',
-    titleZh: '\u65f6\u5149\u7eaa\u5ff5',
-    description: "Graduation, weddings, family portraits \u2014 preserve life's milestones as stunning collectible figurines.",
-    descriptionZh: '\u65e0\u8bba\u662f\u6bd5\u4e1a\u3001\u5a5a\u793c\u8fd8\u662f\u5168\u5bb6\u798f\uff0c\u7528\u7acb\u4f53\u7684\u65b9\u5f0f\u7559\u4e0b\u6c38\u6052\u56de\u5fc6\u3002',
-    image: '/images/hero/memorial.png',
-    thumb: '/images/hero/memorial.png',
-    accent: 'from-emerald-500/20 via-teal-400/10 to-transparent',
   },
 ];
 
@@ -80,6 +69,29 @@ export default function HeroShowcase() {
   const carouselRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<NodeJS.Timeout | null>(null);
   const autoRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load slides from DB (fallback to hardcoded SCENES)
+  useEffect(() => {
+    fetch('/api/hero-slides')
+      .then(res => res.json())
+      .then((data: any[]) => {
+        if (data && data.length > 0) {
+          const mapped: SceneData[] = data.map((s, i) => ({
+            id: i,
+            tag: s.tag,
+            title: s.title,
+            titleZh: s.titleZh || s.title,
+            description: s.description,
+            descriptionZh: s.descriptionZh || s.description,
+            image: s.imageUrl,
+            thumb: s.thumbUrl,
+            accent: s.accent || 'from-amber-500/20 via-orange-400/10 to-transparent',
+          }));
+          setScenes(mapped);
+        }
+      })
+      .catch(() => { /* keep fallback SCENES */ });
+  }, []);
 
   const scene = scenes[activeIndex];
 
@@ -178,6 +190,8 @@ export default function HeroShowcase() {
             src={s.image}
             alt={s.title}
             fill
+            sizes="100vw"
+            quality={90}
             priority={i === 0}
             className={`object-cover transition-transform duration-[8000ms] ease-out ${
               i === activeIndex ? 'scale-110' : 'scale-100'
@@ -271,7 +285,7 @@ export default function HeroShowcase() {
                   {/* Gradient overlay with label */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-3">
                     <span className="text-[9px] text-white/50 uppercase tracking-[0.15em] font-medium">{s.tag}</span>
-                    <span className="text-sm font-bold text-white leading-tight mt-0.5">{s.titleZh}</span>
+                    <span className="text-sm font-bold text-white leading-tight mt-0.5">{s.title}</span>
                   </div>
 
                   {/* Active progress bar on the thumbnail */}

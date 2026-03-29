@@ -3,28 +3,32 @@
 import { useState, useRef, useEffect } from 'react';
 import { IMAGE_GENERATION_MODELS, ImageGenerationModelId } from '@/lib/constants/ai-models';
 import { startAsyncGeneration } from '@/app/actions/start-generation';
-import { Loader2, ArrowLeft, Download, Rotate3D, LayoutGrid } from 'lucide-react';
+import { Loader2, ArrowLeft, Download, Rotate3D, LayoutGrid, ZoomIn } from 'lucide-react';
+import { ImageLightbox } from '@/components/ImageLightbox';
 
 interface FigurineGenerationGalleryProps {
-  subjectImageB64: string;   // The cropped base64 image from the Subject Selection step
-  initialViews?: { primary: string, back: string, side: string } | null;
+  subjectImageB64: string;   // The cropped/processed base64 image (bg-removed if applicable)
+  originalImageForShowcase?: string; // User's original upload (before bg removal) for showcase generation
+  initialViews?: { primary: string, back: string, side: string, showcase?: string } | null;
   onCancel?: () => void;
-  onComplete?: (generatedImages: { primary: string, back: string, side: string }, generatedAssetId?: string) => void;
+  onComplete?: (generatedImages: { primary: string, back: string, side: string, showcase?: string }, generatedAssetId?: string) => void;
   onStatusChange?: (status: StepStatus) => void;
 }
 
 type StepStatus = 'IDLE' | 'GENERATING_PRIMARY' | 'PRIMARY_SUCCESS' | 'GENERATING_SECONDARY' | 'COMPLETE' | 'ERROR';
 
-export default function FigurineGenerationGallery({ subjectImageB64, initialViews, onCancel, onComplete, onStatusChange }: FigurineGenerationGalleryProps) {
+export default function FigurineGenerationGallery({ subjectImageB64, originalImageForShowcase, initialViews, onCancel, onComplete, onStatusChange }: FigurineGenerationGalleryProps) {
   const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
   
   const [selectedModel, setSelectedModel] = useState<ImageGenerationModelId>(IMAGE_GENERATION_MODELS[0].id);
   const [status, setStatus] = useState<StepStatus>(initialViews ? 'COMPLETE' : 'IDLE');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'primary' | 'back' | 'side'>('primary');
+  const [activeTab, setActiveTab] = useState<'primary' | 'back' | 'side' | 'showcase'>('primary');
   const [isReferenceExpanded, setIsReferenceExpanded] = useState<boolean>(true);
   const [currentAssetId, setCurrentAssetId] = useState<string | undefined>(undefined);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [quotaError, setQuotaError] = useState<'LIMIT_REACHED' | 'CONCURRENT_LIMIT' | null>(null);
 
   // Status Change Effect
   useEffect(() => {
@@ -48,6 +52,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, initialView
   const [primaryImage, setPrimaryImage] = useState<string | null>(initialViews?.primary || null);
   const [backImage, setBackImage] = useState<string | null>(initialViews?.back || null);
   const [sideImage, setSideImage] = useState<string | null>(initialViews?.side || null);
+  const [showcaseImage, setShowcaseImage] = useState<string | null>(initialViews?.showcase || null);
 
   // Strip possible base64 URL prefix if passed incorrectly from parent, or support http URLs
   const validSubject = subjectImageB64 && subjectImageB64 !== "null" ? subjectImageB64 : null;
@@ -64,13 +69,33 @@ export default function FigurineGenerationGallery({ subjectImageB64, initialView
          setStatus('GENERATING_PRIMARY');
          
          // 1. Dispatch Background Worker Job
+         // Data flow: originalImageB64 -> DB + prompt2 (showcase), processedImageB64 -> prompt1 (figurine)
+         const hasBgRemoved = !!(originalImageForShowcase && originalImageForShowcase !== subjectImageB64);
+         let showcaseCleanB64 = cleanB64 || "";
+         if (hasBgRemoved && originalImageForShowcase) {
+           const isOrigHttp = originalImageForShowcase.startsWith('http') || originalImageForShowcase.startsWith('blob:');
+           if (!isOrigHttp) {
+             showcaseCleanB64 = originalImageForShowcase.includes('base64,') ? originalImageForShowcase.split('base64,')[1] : originalImageForShowcase;
+           }
+         }
          const initResult = await startAsyncGeneration({
-            originalImageB64: cleanB64 || "",
+            originalImageB64: hasBgRemoved ? showcaseCleanB64 : (cleanB64 || ""),
+            processedImageB64: hasBgRemoved ? (cleanB64 ? `data:image/jpeg;base64,${cleanB64}` : undefined) : undefined,
             modelId: selectedModel,
             prompt: "Auto-generated 3D Render",
          });
 
          if (!initResult.success || !initResult.assetId) {
+            if (initResult.reason === 'LIMIT_REACHED') {
+               setStatus('IDLE');
+               setQuotaError('LIMIT_REACHED');
+               return;
+            }
+            if (initResult.reason === 'CONCURRENT_LIMIT') {
+               setStatus('IDLE');
+               setQuotaError('CONCURRENT_LIMIT');
+               return;
+            }
             throw new Error(initResult.error || "Failed to initialize generation queue.");
          }
 
@@ -102,6 +127,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, initialView
                      setPrimaryImage(data.asset.resultImage);
                      setBackImage(data.asset.backImage || data.asset.resultImage);
                      setSideImage(data.asset.sideImage || data.asset.resultImage);
+                      setShowcaseImage(data.asset.showcaseImage || null);
                      setStatus('COMPLETE');
                   } else if (data.asset.status === 'FAILED') {
                      clearInterval(pollInterval);
@@ -161,11 +187,16 @@ export default function FigurineGenerationGallery({ subjectImageB64, initialView
              <div>
                  {/* Developer Note: Model Selection <select> was removed for production minimalism */}
                  <button 
-                     onClick={startGenerationFlow}
-                     disabled={status === 'GENERATING_PRIMARY' || status === 'GENERATING_SECONDARY' || status === 'COMPLETE'}
-                     className={`relative font-medium px-8 py-2.5 rounded-full transition-all shadow-md overflow-hidden ${status === 'IDLE' || status === 'ERROR' ? 'bg-black dark:bg-white text-white dark:text-black hover:-translate-y-0.5 hover:shadow-lg cursor-pointer' : status === 'COMPLETE' ? 'bg-[#00D084]/10 border border-[#00D084]/20 cursor-default shadow-none' : 'bg-black/5 dark:bg-white/5 text-[var(--text-tertiary)] cursor-not-allowed border border-black/5 dark:border-white/5'}`}
+                     onClick={() => { setQuotaError(null); startGenerationFlow(); }}
+                     disabled={!!quotaError || status === 'GENERATING_PRIMARY' || status === 'GENERATING_SECONDARY' || status === 'COMPLETE'}
+                     className={`relative font-medium px-8 py-2.5 rounded-full transition-all shadow-md overflow-hidden ${quotaError ? 'bg-black/5 dark:bg-white/5 text-[var(--text-tertiary)] cursor-not-allowed border border-black/5 dark:border-white/5 opacity-60' : status === 'IDLE' || status === 'ERROR' ? 'bg-black dark:bg-white text-white dark:text-black hover:-translate-y-0.5 hover:shadow-lg cursor-pointer' : status === 'COMPLETE' ? 'bg-[#00D084]/10 border border-[#00D084]/20 cursor-default shadow-none' : 'bg-black/5 dark:bg-white/5 text-[var(--text-tertiary)] cursor-not-allowed border border-black/5 dark:border-white/5'}`}
+                     title={quotaError === 'LIMIT_REACHED' ? 'Generation limit reached' : quotaError === 'CONCURRENT_LIMIT' ? 'Please wait for current generation to finish' : undefined}
                  >
-                     {status === 'IDLE' || status === 'ERROR' ? (
+                     {quotaError === 'LIMIT_REACHED' ? (
+                         <span className="relative z-10 flex items-center gap-2 text-sm">Generation Limit Reached</span>
+                     ) : quotaError === 'CONCURRENT_LIMIT' ? (
+                         <span className="relative z-10 flex items-center gap-2 text-sm">Please Wait for Current Job</span>
+                     ) : status === 'IDLE' || status === 'ERROR' ? (
                          <span className="relative z-10 flex items-center gap-2">Initialize Canvas</span>
                      ) : (
                          <span className="relative z-10 flex items-center gap-2">
@@ -292,12 +323,20 @@ export default function FigurineGenerationGallery({ subjectImageB64, initialView
                     </div>
                 )}
 
-                {status === 'COMPLETE' && (
-                    <img 
-                       src={activeTab === 'primary' ? primaryImage! : activeTab === 'back' ? backImage! : sideImage!} 
-                       className="w-full h-full object-contain drop-shadow-2xl transition-opacity animate-in zoom-in-[0.98] fade-in duration-700 ease-out" 
-                       alt="Rendered View"
-                    />
+                {status === 'COMPLETE' && (activeTab === 'primary' ? primaryImage : activeTab === 'back' ? backImage : activeTab === 'side' ? sideImage : showcaseImage) && (
+                    <div 
+                       className="w-full h-full relative cursor-pointer group"
+                       onClick={() => {
+                         const src = activeTab === 'primary' ? primaryImage : activeTab === 'back' ? backImage : activeTab === 'side' ? sideImage : showcaseImage;
+                         if (src) setLightboxSrc(src);
+                       }}
+                    >
+                       <img 
+                          src={(activeTab === 'primary' ? primaryImage : activeTab === 'back' ? backImage : activeTab === 'side' ? sideImage : showcaseImage)!} 
+                          className="w-full h-full object-contain drop-shadow-2xl transition-opacity animate-in zoom-in-[0.98] fade-in duration-700 ease-out" 
+                          alt="Rendered View"
+                       />
+                    </div>
                 )}
             </div>
             {/* Right HUD: Thumbnails Side Panel (Only on Complete) */}
@@ -307,7 +346,8 @@ export default function FigurineGenerationGallery({ subjectImageB64, initialView
                     {[
                         { id: 'primary', img: primaryImage, label: 'Front Render', delay: 'delay-100' },
                         { id: 'back', img: backImage, label: 'Back Render', delay: 'delay-200' },
-                        { id: 'side', img: sideImage, label: 'Left Render', delay: 'delay-300' }
+                        { id: 'side', img: sideImage, label: 'Left Render', delay: 'delay-300' },
+                         ...(showcaseImage ? [{ id: 'showcase', img: showcaseImage, label: 'Showcase', delay: 'delay-[400ms]' }] : [])
                     ].map((thumb) => (
                         <button
                             key={thumb.id}
@@ -336,7 +376,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, initialView
               <button 
                 onClick={() => {
                    if (onComplete && primaryImage && backImage && sideImage) {
-                      onComplete({ primary: primaryImage, back: backImage, side: sideImage }, currentAssetId);
+                      onComplete({ primary: primaryImage, back: backImage, side: sideImage, showcase: showcaseImage || undefined }, currentAssetId);
                    }
                 }}
                 disabled={status !== 'COMPLETE'}
@@ -345,6 +385,14 @@ export default function FigurineGenerationGallery({ subjectImageB64, initialView
                  <Download className="w-4 h-4" /> Finalize Tri-View Model
               </button>
         </div>
+
+         {/* Lightbox for viewing full-size images */}
+         <ImageLightbox
+            src={lightboxSrc || ''}
+            alt="Full Size View"
+            isOpen={!!lightboxSrc}
+            onClose={() => setLightboxSrc(null)}
+         />
 
     </div>
   );

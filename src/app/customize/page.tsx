@@ -8,9 +8,11 @@ import { saveGeneratedAsset } from '@/app/actions/save-asset';
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
 import FigurineGenerationGallery from '@/components/ai/FigurineGenerationGallery';
+import { ClickableImage } from '@/components/ImageLightbox';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { removeImageBackground, isBgRemovalEnabled } from '@/lib/remove-background';
 
 type Step = 'upload' | 'generate' | 'select' | 'confirm';
 
@@ -35,6 +37,15 @@ export default function CustomizePage() {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [galleryStatus, setGalleryStatus] = useState<string>('IDLE');
   const [isAddedToCart, setIsAddedToCart] = useState<boolean>(false);
+
+  /* BG Removal 状态 */
+  const [bgOriginal, setBgOriginal] = useState<string | null>(null);     // 原图（抠图前）
+  const [bgProcessed, setBgProcessed] = useState<string | null>(null);   // 抠图结果缓存
+  const [bgProcessing, setBgProcessing] = useState(false);               // WASM 是否在执行
+  const [bgFilterEnabled, setBgFilterEnabled] = useState(true);          // Toggle 开关
+  const bgCancelledRef = useRef(false);                                  // 抠图取消标记
+  const bgSourceRef = useRef<string | null>(null);                       // PNG 源图（用于重新抠图）
+
 
   const {
     uploadedImage,
@@ -148,60 +159,191 @@ export default function CustomizePage() {
     }));
   };
 
-  // 处理文件上传并压缩 (Fix QuotaExceededError)
+  // 压缩图片到指定尺寸，支持 JPEG/PNG 双模式输出
+  // JPEG 模式：填白底 + 0.8 质量（最小体积，用于最终存储）
+  // PNG 模式：保留原始透明通道（用于抠图输入，避免白底污染）
+  const compressImage = (file: File, maxWidth: number, outputFormat: 'jpeg' | 'png' = 'jpeg'): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Calculate new dimensions with a STRICT 1024 bounding box (1K Normalization)
+          if (Math.max(width, height) > maxWidth) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxWidth) / height);
+              height = maxWidth;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          if (ctx) {
+            if (outputFormat === 'jpeg') {
+              // JPEG 模式：填白底防止透明区域变黑
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, width, height);
+            }
+            // PNG 模式：不填充背景，保留原始透明通道
+            ctx.drawImage(img, 0, 0, width, height);
+          }
+          
+          if (outputFormat === 'png') {
+            resolve(canvas.toDataURL('image/png'));
+          } else {
+            // JPEG 80% 质量，大幅减小 base64 体积 (Fix QuotaExceededError)
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
+          }
+        };
+        img.onerror = reject;
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // 检测 Canvas 中的图片是否已有透明背景（边缘像素采样）
+  // 扫描四边各一行/列，统计 alpha < 250 的像素占比，超过 5% 判定为透明
+  const hasTransparentBackground = (dataUrl: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(false); return; }
+        
+        ctx.drawImage(img, 0, 0);
+        
+        const w = img.width;
+        const h = img.height;
+        let transparentPixels = 0;
+        let totalSampled = 0;
+
+        // 采样四条边
+        const samplePixel = (x: number, y: number) => {
+          const pixel = ctx.getImageData(x, y, 1, 1).data;
+          totalSampled++;
+          if (pixel[3] < 250) transparentPixels++;
+        };
+
+        // 为性能考虑，每条边最多采样 100 个像素点
+        const stepX = Math.max(1, Math.floor(w / 100));
+        const stepY = Math.max(1, Math.floor(h / 100));
+
+        for (let x = 0; x < w; x += stepX) {
+          samplePixel(x, 0);           // 顶边
+          samplePixel(x, h - 1);       // 底边
+        }
+        for (let y = 0; y < h; y += stepY) {
+          samplePixel(0, y);           // 左边
+          samplePixel(w - 1, y);       // 右边
+        }
+
+        const ratio = totalSampled > 0 ? transparentPixels / totalSampled : 0;
+        console.log(`[TransparencyDetect] ${transparentPixels}/${totalSampled} edge pixels transparent (${(ratio * 100).toFixed(1)}%)`);
+        resolve(ratio > 0.05); // 超过 5% 判定为已有透明背景
+      };
+      img.onerror = () => resolve(false);
+      img.src = dataUrl;
+    });
+  };
+
+  // 将透明 PNG data URL 降级为 JPEG（填白底），用于最终存入 state 以节省 localStorage
+  const downgradeToJpeg = (pngDataUrl: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('No canvas context')); return; }
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, img.width, img.height);
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.onerror = reject;
+      img.src = pngDataUrl;
+    });
+  };
+
+  // 处理文件上传：双模式压缩 + 智能抠图流程
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // We use a Promise to read and compress the image using Canvas
-    const compressImage = (file: File, maxWidth: number): Promise<string> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            
-            // Calculate new dimensions with a STRICT 1024 bounding box (1K Normalization)
-            if (Math.max(width, height) > maxWidth) {
-              if (width > height) {
-                height = Math.round((height * maxWidth) / width);
-                width = maxWidth;
-              } else {
-                width = Math.round((width * maxWidth) / height);
-                height = maxWidth;
-              }
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            
-            // Fill with white background in case of transparent PNG
-            if (ctx) {
-              ctx.fillStyle = '#FFFFFF';
-              ctx.fillRect(0, 0, width, height);
-              ctx.drawImage(img, 0, 0, width, height);
-            }
-            
-            // Export as JPEG at 80% quality (drastically reduces base64 size for localStorage)
-            resolve(canvas.toDataURL('image/jpeg', 0.8));
-          };
-          img.onerror = reject;
-          img.src = event.target?.result as string;
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    };
-
     try {
-      const compressedBase64 = await compressImage(file, 1024); // 1K bounding box limit
-      setUploadedImage(compressedBase64);
+      const bgEnabled = isBgRemovalEnabled() && bgFilterEnabled;
+
+      if (bgEnabled) {
+        // === 抠图模式：用 PNG 压缩保留透明通道，给抠图更干净的输入 ===
+        const pngBase64 = await compressImage(file, 1024, 'png');
+        bgSourceRef.current = pngBase64; // 保存 PNG 源图供 toggle 重新抠图用
+        
+        // 立即显示预览（PNG 中间态）
+        const jpegPreview = await downgradeToJpeg(pngBase64);
+        setUploadedImage(jpegPreview);
+        setBgOriginal(jpegPreview);
+        setBgProcessed(null); // 清除旧缓存
+
+        // 检测是否已有透明背景，有则跳过抠图
+        const alreadyTransparent = await hasTransparentBackground(pngBase64);
+        if (alreadyTransparent) {
+          console.log('[Upload] Image already has transparent background, skipping BG removal.');
+          const jpegResult = await downgradeToJpeg(pngBase64);
+          setUploadedImage(jpegResult);
+          setBgOriginal(null);
+          return;
+        }
+
+        // 执行抠图（setTimeout 让 React 先渲染 loading 态）
+        bgCancelledRef.current = false;
+        setBgProcessing(true);
+        setTimeout(() => {
+          removeImageBackground(pngBase64).then(async (result) => {
+            setBgProcessing(false);
+            if (bgCancelledRef.current) {
+              console.log('[BgRemoval] Cancelled by user. Ignoring result.');
+              return;
+            }
+            if (result.wasProcessed) {
+              console.log('[BgRemoval] Done. Caching processed image.');
+              const jpegResult = await downgradeToJpeg(result.processedImageUrl);
+              setBgProcessed(jpegResult);       // 缓存抠图结果
+              setUploadedImage(jpegResult);      // 展示抠图版
+            } else {
+              setBgOriginal(null);
+            }
+          });
+        }, 50); // 50ms 足够让 React 完成一次渲染周期
+      } else {
+        // === 非抠图模式：JPEG 直出 ===
+        const compressedBase64 = await compressImage(file, 1024, 'jpeg');
+        setUploadedImage(compressedBase64);
+        // 也压缩一份 PNG 备用（后续 toggle ON 时需要）
+        const pngForLater = await compressImage(file, 1024, 'png');
+        bgSourceRef.current = pngForLater;
+        // 设置新原图引用 + 清理旧抠图缓存
+        setBgOriginal(compressedBase64);
+        setBgProcessed(null);
+        setBgProcessing(false);
+      }
     } catch (error) {
-      console.error("Failed to compress image:", error);
+      console.error("Failed to process image:", error);
+      setBgProcessing(false);
       alert(t('uploadError') || 'Failed to process image');
     }
   };
@@ -387,7 +529,7 @@ export default function CustomizePage() {
 
         {/* Step 1: 上传图片 */}
         {step === 'upload' && (
-          <div className={`p-8 ${styles.card}`} style={{ backgroundColor: config.colors.background }}>
+          <div id="upload-card" className={`p-8 ${styles.card} relative`} style={{ backgroundColor: config.colors.background }}>
             {/* 恢复至极简文件上传，并设置严格的高度控制 */}
             {!uploadedImage ? (
                 <div
@@ -412,25 +554,123 @@ export default function CustomizePage() {
                 </div>
             ) : (
                 <div className="mt-8 flex flex-col gap-6 animate-in fade-in zoom-in duration-300">
-                    <div className="w-full max-h-80 overflow-hidden rounded-xl border flex items-center justify-center bg-gray-50/50" style={{ borderColor: config.colors.border }}>
-                        {/* 限制最大高度，防止图片撑满整个屏幕 */}
-                        <img 
+                    <div className="w-full max-h-80 overflow-hidden rounded-xl border flex items-center justify-center bg-gray-50/50 relative" style={{ borderColor: config.colors.border }}>
+                        <ClickableImage 
                            src={uploadedImage} 
                            alt="Preview" 
                            className="object-contain max-h-[300px] w-auto h-auto rounded-lg" 
                         />
+                        {/* [TEMP] 抠图状态角标 */}
+                        {bgProcessing && (
+                          <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1">
+                            <Loader2 className="h-3 w-3 animate-spin" /> Removing BG...
+                          </div>
+                        )}
                     </div>
-                    
-                    <div className="flex flex-col sm:flex-row gap-4 w-full">
+
+                    {/* BG Removal Before/After 对比条 */}
+                    {bgOriginal && !bgProcessing && bgOriginal !== uploadedImage && (
+                      <div className="flex gap-3 p-3 rounded-lg border border-dashed border-gray-300 bg-gray-50/80">
+                        <div className="flex-1 text-center">
+                          <p className="text-[10px] font-mono text-gray-400 mb-1">BEFORE</p>
+                          <ClickableImage src={bgOriginal} alt="Original" className="w-full h-32 object-contain rounded bg-white" />
+                        </div>
+                        <div className="flex-1 text-center">
+                          <p className="text-[10px] font-mono text-gray-400 mb-1">AFTER (BG Removed)</p>
+                          <ClickableImage src={uploadedImage} alt="Background Removed" className="w-full h-32 object-contain rounded" style={{backgroundImage: 'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)', backgroundSize: '12px 12px', backgroundPosition: '0 0, 0 6px, 6px -6px, -6px 0px'}} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Smart Background Filter Toggle */}
+                    {isBgRemovalEnabled() && (
+                      <div className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50" style={{ borderColor: config.colors.border }}>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium" style={{ color: config.colors.text }}>
+                            {t('bgFilterTitle') || 'Smart Background Filter'}
+                          </span>
+                          <span className="text-[11px] opacity-60" style={{ color: config.colors.textMuted }}>
+                            {bgProcessing 
+                              ? 'Optimizing image...'
+                              : bgProcessed && bgFilterEnabled
+                                ? 'Background removed successfully'
+                                : (t('bgFilterDesc') || 'Automatically remove image background for better results')
+                            }
+                          </span>
+                        </div>
+                        {bgProcessing ? (
+                          /* 抠图中：显示小 loading 指示器（不可交互） */
+                          <div className="flex items-center gap-2 text-emerald-600">
+                            <div className="h-5 w-5 border-2 border-gray-200 border-t-emerald-500 rounded-full animate-spin" />
+                          </div>
+                        ) : (
+                          /* 抠图完成或未启用：可交互 Toggle */
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={bgFilterEnabled}
+                            onClick={() => {
+                              if (bgFilterEnabled) {
+                                // 关闭：切回原图
+                                setBgFilterEnabled(false);
+                                if (bgOriginal) setUploadedImage(bgOriginal);
+                              } else {
+                                // 开启：有缓存秒切，无缓存重新跑 WASM
+                                setBgFilterEnabled(true);
+                                if (bgProcessed) {
+                                  setUploadedImage(bgProcessed);
+                                } else if (bgSourceRef.current && bgOriginal) {
+                                  // 无缓存但有 PNG 源图 → 重新执行抠图
+                                  bgCancelledRef.current = false;
+                                  setBgProcessing(true);
+                                  const pngSrc = bgSourceRef.current;
+                                  setTimeout(() => {
+                                    removeImageBackground(pngSrc).then(async (result) => {
+                                      setBgProcessing(false);
+                                      if (bgCancelledRef.current) {
+                                        console.log('[BgRemoval:ReToggle] Cancelled. Ignoring.');
+                                        return;
+                                      }
+                                      if (result.wasProcessed) {
+                                        const jpegResult = await downgradeToJpeg(result.processedImageUrl);
+                                        setBgProcessed(jpegResult);
+                                        setUploadedImage(jpegResult);
+                                      }
+                                    });
+                                  }, 50);
+                                }
+                              }
+                            }}
+                            className={`cursor-pointer relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${bgFilterEnabled ? 'bg-[#00D084]' : 'bg-gray-300'}`}
+                          >
+                            <span
+                              className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${bgFilterEnabled ? 'translate-x-5' : 'translate-x-0'}`}
+                            />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                                        <div className="flex flex-col sm:flex-row gap-4 w-full">
                         <button
-                          onClick={() => setUploadedImage(null)}
+                          onClick={() => {
+                            setUploadedImage(null);
+                            // 重置所有 bg 状态
+                            setBgOriginal(null);
+                            setBgProcessed(null);
+                            setBgProcessing(false);
+                            bgSourceRef.current = null;
+                          }}
                           className="flex-1 rounded-full border py-3.5 text-sm font-medium hover:bg-black/5 transition-all"
                           style={{ borderColor: config.colors.border, color: config.colors.text }}
                         >
                           重新选择
                         </button>
                         <button
-                          onClick={() => handleGenerate(uploadedImage)}
+                          onClick={() => {
+                            // 边界处理：抠图中 → 用原图生成，不等抠图完成
+                            const imageForGeneration = (bgProcessing && bgOriginal) ? bgOriginal : uploadedImage;
+                            if (imageForGeneration) handleGenerate(imageForGeneration);
+                          }}
                           className={`flex-[2] flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-all ${styles.button}`}
                         >
                           <Sparkles className="h-4 w-4" /> 生成 3D 模型
@@ -446,6 +686,7 @@ export default function CustomizePage() {
           <div className="w-full relative z-20">
              <FigurineGenerationGallery 
                 subjectImageB64={uploadedImage}
+                 originalImageForShowcase={bgOriginal || uploadedImage}
                 initialViews={generatedViews}
                 onCancel={() => {
                    if (editingVaultAssetId) {
@@ -497,12 +738,12 @@ export default function CustomizePage() {
 
         {/* Step 3: 选择选项 */}
         {step === 'select' && (
-          <div className={`p-8 ${styles.card}`} style={{ backgroundColor: config.colors.background }}>
+          <div id="upload-card" className={`p-8 ${styles.card} relative`} style={{ backgroundColor: config.colors.background }}>
             {/* 图片预览 */}
             <div className="mb-6 flex justify-center">
               <div className={`relative rounded-xl border p-4`} style={{ borderColor: config.colors.border }}>
                 {(generatedImage || uploadedImage) && (
-                   <img src={generatedImage || uploadedImage!} alt="Generated" className="max-h-64 rounded-lg object-contain" />
+                   <ClickableImage src={generatedImage || uploadedImage!} alt="Generated" className="max-h-64 rounded-lg object-contain" />
                 )}
                 <div className="absolute bottom-6 left-6 rounded-full bg-black/70 px-3 py-1 text-xs text-white">
                   AI Generated Preview
@@ -579,7 +820,7 @@ export default function CustomizePage() {
 
         {/* Step 4: 确认 */}
         {step === 'confirm' && (
-          <div className={`p-8 ${styles.card}`} style={{ backgroundColor: config.colors.background }}>
+          <div id="upload-card" className={`p-8 ${styles.card} relative`} style={{ backgroundColor: config.colors.background }}>
             <div className="mb-6 flex items-start">
               <button 
                  onClick={() => setStep('select')} 
@@ -594,7 +835,7 @@ export default function CustomizePage() {
               {/* 图片 */}
               <div className="space-y-4">
                 <div className={`rounded-xl border p-4`} style={{ borderColor: config.colors.border }}>
-                  {(generatedImage || uploadedImage) && <img src={generatedImage || uploadedImage!} alt="Your design" className="w-full rounded-lg" />}
+                  {(generatedImage || uploadedImage) && <ClickableImage src={generatedImage || uploadedImage!} alt="Your design" className="w-full rounded-lg" />}
                 </div>
                 {uploadedImage && (
                    <div className="rounded-xl p-4" style={{ backgroundColor: config.colors.backgroundAlt }}>
@@ -602,7 +843,7 @@ export default function CustomizePage() {
                        <ImageIcon className="h-4 w-4" />
                        {t('originalImage')}
                      </h3>
-                     <img src={uploadedImage} alt="Original" className="mt-2 h-32 w-full rounded-lg object-cover" />
+                     <ClickableImage src={uploadedImage} alt="Original" className="mt-2 h-32 w-full rounded-lg object-cover" />
                    </div>
                 )}
               </div>

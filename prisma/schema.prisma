@@ -33,6 +33,11 @@ model User {
   accounts         Account[]
   sessions      Session[]
   
+  // Generation limits
+  maxConcurrentJobs   Int      @default(1)      // 同时进行的生图任务上限
+  maxTotalGenerations Int      @default(3)       // 总生图次数上限
+  isWhitelisted       Boolean  @default(false)   // 白名单（无限制）
+
   // Custom Relations
   generatedAssets GeneratedAsset[]
   storeOrders     StoreOrder[]
@@ -97,6 +102,7 @@ model GeneratedAsset {
   resultImage        String?  @db.Text
   backImage          String?  @db.Text
   sideImage          String?  @db.Text
+  showcaseImage      String?  @db.Text  // 效果展示图 URL（提示词2 生成）
   prompt             String?  @db.Text
   baseModelVariantId String?
   status             GenerationStatus @default(COMPLETE) // Default true for legacy, handled in code
@@ -117,4 +123,25 @@ model StoreOrder {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ==============
+// HERO CAROUSEL CMS
+// ==============
+
+model HeroSlide {
+  id            String   @id @default(cuid())
+  sortOrder     Int      @default(0)
+  tag           String                           // "Game Characters"
+  tagZh         String?                          // "游戏角色"
+  title         String                           // English title
+  titleZh       String?                          // 中文标题
+  description   String   @db.Text               // English description
+  descriptionZh String?  @db.Text               // 中文描述
+  imageUrl      String   @db.Text               // 背景大图 URL (Blob)
+  thumbUrl      String   @db.Text               // 缩略图 URL (Blob)
+  accent        String   @default("from-amber-500/20 via-orange-400/10 to-transparent")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

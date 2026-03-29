@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { put } from '@vercel/blob';
 import { generatePrimaryRender, generateSecondaryViews } from '@/app/actions/image-to-3d';
 
-export const maxDuration = 120; // 2 minutes to allow 3 generation calls
+export const maxDuration = 120; // 2 minutes to allow 4 generation calls (3-way parallel)
 
 async function uploadBase64ToBlob(base64Str: string, prefix: string): Promise<string> {
     let buffer: Buffer;
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   let assetIdToFail = '';
   
   try {
-    const { assetId, modelId, originalImageUrl } = await req.json();
+    const { assetId, modelId, originalImageUrl, processedImageUrl } = await req.json();
 
     if (!assetId || !modelId || !originalImageUrl) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -40,33 +40,53 @@ export async function POST(req: Request) {
 
     console.log(`[Webhook:Generate] Starting async job for asset ${assetId}`);
 
-    // Since we only passed the URL to save webhook payload size, we fetch the image to convert it back to b64 for Gemini
+    // Fetch original image (always needed for showcase / fallback)
     const imageResp = await fetch(originalImageUrl);
     const arrayBuffer = await imageResp.arrayBuffer();
-    const base64Image = Buffer.from(arrayBuffer).toString('base64');
+    const originalBase64 = Buffer.from(arrayBuffer).toString('base64');
+    
+    const contentTypeFromUrl = imageResp.headers.get('content-type') || 'unknown';
+    console.log(`[Webhook:Generate] Original image fetched: ${originalBase64.length} chars, content-type: ${contentTypeFromUrl}`);
 
-    // 1. Generate Primary Render
-    const primaryResult = await generatePrimaryRender(base64Image, modelId);
+    // Determine the input for primary render: use processed (bg-removed) if available
+    let primaryInputBase64 = originalBase64;
+    if (processedImageUrl) {
+      try {
+        const processedResp = await fetch(processedImageUrl);
+        const processedBuffer = await processedResp.arrayBuffer();
+        primaryInputBase64 = Buffer.from(processedBuffer).toString('base64');
+        console.log(`[Webhook:Generate] Processed image fetched: ${primaryInputBase64.length} chars`);
+      } catch (err) {
+        console.warn(`[Webhook:Generate] Failed to fetch processed image, falling back to original:`, err);
+      }
+    }
+
+    // 1. Generate Primary Render (提示词1 — 使用抠图后图片优先)
+    const primaryResult = await generatePrimaryRender(primaryInputBase64, modelId);
     if (primaryResult.error || !primaryResult.b64_json) {
+       console.error(`[Webhook:Generate] PRIMARY RENDER FAILED. Error: ${primaryResult.error}`);
        throw new Error(primaryResult.error || "Failed primary render");
     }
     const primaryB64 = primaryResult.b64_json;
     console.log(`[Webhook:Generate] Primary render success for asset ${assetId}`);
 
-    // 2. Generate Secondary Views
-    const secondaryResult = await generateSecondaryViews(primaryB64, modelId);
+    // 2. Generate Secondary Views + Showcase (3-way parallel)
+    // 提示词2 (showcase) 始终使用原始图片
+    const secondaryResult = await generateSecondaryViews(primaryB64, modelId, originalBase64);
     let backB64 = secondaryResult.backViewB64;
     let sideB64 = secondaryResult.leftViewB64;
-    console.log(`[Webhook:Generate] Secondary views success for asset ${assetId}`);
+    let showcaseB64 = secondaryResult.showcaseB64;
+    console.log(`[Webhook:Generate] Secondary views + showcase complete for asset ${assetId} (showcase: ${showcaseB64 ? 'yes' : 'failed/null'})`);
 
     // 3. Parallel Upload to Vercel CDN
     const uploadPromises = [
        uploadBase64ToBlob(primaryB64, `primary-${assetId}`),
        backB64 ? uploadBase64ToBlob(backB64, `back-${assetId}`) : Promise.resolve(null),
-       sideB64 ? uploadBase64ToBlob(sideB64, `side-${assetId}`) : Promise.resolve(null)
+       sideB64 ? uploadBase64ToBlob(sideB64, `side-${assetId}`) : Promise.resolve(null),
+       showcaseB64 ? uploadBase64ToBlob(showcaseB64, `showcase-${assetId}`) : Promise.resolve(null)
     ];
 
-    const [primaryUrl, backUrl, sideUrl] = await Promise.all(uploadPromises);
+    const [primaryUrl, backUrl, sideUrl, showcaseUrl] = await Promise.all(uploadPromises);
 
     // 4. Update Database to COMPLETE
     await prisma.generatedAsset.update({
@@ -75,7 +95,8 @@ export async function POST(req: Request) {
          status: 'COMPLETE',
          resultImage: primaryUrl as string,
          backImage: backUrl as string | null,
-         sideImage: sideUrl as string | null
+         sideImage: sideUrl as string | null,
+         showcaseImage: showcaseUrl as string | null
       }
     });
 
