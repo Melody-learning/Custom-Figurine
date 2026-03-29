@@ -457,9 +457,9 @@ export default function CustomizePage() {
   return (
     <main className={`min-h-screen relative overflow-hidden transition-all duration-700 ${step === 'generate' && galleryStatus === 'COMPLETE' ? 'py-4 sm:py-6' : 'py-12'}`} style={{ backgroundColor: config.colors.backgroundAlt }}>
       {/* Animated Background Gradients */}
-      <div className="absolute top-0 right-0 w-full h-1/2 bg-gradient-to-b from-blue-950/30 to-transparent pointer-events-none" />
-      <div className="absolute top-20 -left-20 w-96 h-96 bg-gradient-to-r from-purple-900/20 to-pink-900/20 rounded-full blur-3xl animate-float pointer-events-none" style={{ animationDelay: '0s' }} />
-      <div className="absolute bottom-20 -right-20 w-96 h-96 bg-gradient-to-l from-yellow-900/20 to-rose-900/20 rounded-full blur-3xl animate-float pointer-events-none" style={{ animationDelay: '2s' }} />
+      <div className="absolute top-0 right-0 w-full h-1/2 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
+      <div className="absolute top-20 -left-20 w-96 h-96 bg-gradient-to-r from-purple-200/30 to-pink-200/30 rounded-full blur-3xl animate-float pointer-events-none" style={{ animationDelay: '0s' }} />
+      <div className="absolute bottom-20 -right-20 w-96 h-96 bg-gradient-to-l from-yellow-200/30 to-rose-200/30 rounded-full blur-3xl animate-float pointer-events-none" style={{ animationDelay: '2s' }} />
 
       <div className={`w-full mx-auto px-4 sm:px-6 xl:px-8 relative z-10 transition-all duration-700 ${step === 'generate' && galleryStatus === 'COMPLETE' ? 'max-w-[1600px]' : 'max-w-4xl'}`}>
         
