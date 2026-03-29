@@ -91,7 +91,6 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
                setQuotaError('LIMIT_REACHED');
                return;
             }
-
             throw new Error(initResult.error || "Failed to initialize generation queue.");
          }
 
@@ -236,7 +235,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
                        ) : (
                            <LayoutGrid className="w-5 h-5 text-zinc-500 mx-auto" />
                        )}
-                       {isReferenceExpanded && status === 'COMPLETE' && <span className="text-emerald-500 text-xs shrink-0">鉁?/span>}
+                       {isReferenceExpanded && status === 'COMPLETE' && <span className="text-emerald-500 text-xs shrink-0">✓</span>}
                    </button>
                    
                    {/* Collapsible Content */}
