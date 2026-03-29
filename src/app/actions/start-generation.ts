@@ -27,48 +27,37 @@ export async function startAsyncGeneration(payload: StartGenerationPayload) {
 
     const userId = session.user.id;
 
-    // === Quota Check (with pessimistic lock to prevent race conditions) ===
-    const quotaResult = await prisma.$transaction(async (tx) => {
-      // Lock user row to prevent concurrent checks from both passing
-      const [userRow] = await tx.$queryRawUnsafe<any[]>(
-        `SELECT "isWhitelisted", "maxConcurrentJobs", "maxTotalGenerations" FROM "User" WHERE id = $1 FOR UPDATE`,
-        userId
-      );
+    // === Quota Check (total limit only, whitelist users bypass) ===
+    const quotaResult = await (async () => {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { isWhitelisted: true, maxTotalGenerations: true },
+      });
 
-      if (!userRow) {
+      if (!user) {
         return { pass: false, reason: 'user_not_found' } as const;
       }
 
-      // Concurrent check applies to ALL users (including whitelist)
-      const activeJobs = await tx.generatedAsset.count({
-        where: { userId, status: 'PENDING' },
+      // Whitelisted users have no limit
+      if (user.isWhitelisted) {
+        return { pass: true } as const;
+      }
+
+      // Total limit for non-whitelisted users
+      const totalUsed = await prisma.generatedAsset.count({
+        where: { userId, status: { in: ['PENDING', 'COMPLETE'] } },
       });
-      if (activeJobs >= userRow.maxConcurrentJobs) {
+      if (totalUsed >= user.maxTotalGenerations) {
         return {
           pass: false,
-          reason: 'CONCURRENT_LIMIT',
-          active: activeJobs,
-          max: userRow.maxConcurrentJobs,
+          reason: 'LIMIT_REACHED',
+          used: totalUsed,
+          max: user.maxTotalGenerations,
         } as const;
       }
 
-      // Total limit only applies to non-whitelisted users
-      if (!userRow.isWhitelisted) {
-        const totalUsed = await tx.generatedAsset.count({
-          where: { userId, status: { in: ['PENDING', 'COMPLETE'] } },
-        });
-        if (totalUsed >= userRow.maxTotalGenerations) {
-          return {
-            pass: false,
-            reason: 'LIMIT_REACHED',
-            used: totalUsed,
-            max: userRow.maxTotalGenerations,
-          } as const;
-        }
-      }
-
       return { pass: true } as const;
-    });
+    })();
 
     if (!quotaResult.pass) {
       return { success: false, ...quotaResult };

@@ -9,7 +9,7 @@ interface UserItem {
   email: string | null;
   image: string | null;
   role: string;
-  maxConcurrentJobs: number;
+
   maxTotalGenerations: number;
   isWhitelisted: boolean;
   createdAt: string;
@@ -24,7 +24,7 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ maxConcurrentJobs: number; maxTotalGenerations: number } | null>(null);
+  const [editForm, setEditForm] = useState<{ maxTotalGenerations: number } | null>(null);
   const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -53,7 +53,7 @@ export default function AdminUsersPage() {
 
   const startEditing = (user: UserItem) => {
     setEditingId(user.id);
-    setEditForm({ maxConcurrentJobs: user.maxConcurrentJobs, maxTotalGenerations: user.maxTotalGenerations });
+    setEditForm({ maxTotalGenerations: user.maxTotalGenerations });
   };
 
   const saveEditing = async () => {
@@ -98,7 +98,6 @@ export default function AdminUsersPage() {
               <th className="text-left px-4 py-3 text-white/40 font-medium">User</th>
               <th className="text-left px-4 py-3 text-white/40 font-medium">Role</th>
               <th className="text-center px-4 py-3 text-white/40 font-medium">Generations</th>
-              <th className="text-center px-4 py-3 text-white/40 font-medium">Concurrent</th>
               <th className="text-center px-4 py-3 text-white/40 font-medium">Max Total</th>
               <th className="text-center px-4 py-3 text-white/40 font-medium">Whitelist</th>
               <th className="text-right px-4 py-3 text-white/40 font-medium">Actions</th>
@@ -106,9 +105,9 @@ export default function AdminUsersPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-white/30"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></td></tr>
+              <tr><td colSpan={6} className="px-4 py-12 text-center text-white/30"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-white/30">No users found</td></tr>
+              <tr><td colSpan={6} className="px-4 py-12 text-center text-white/30">No users found</td></tr>
             ) : items.map((user) => (
               <tr key={user.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                 <td className="px-4 py-3">
@@ -134,16 +133,7 @@ export default function AdminUsersPage() {
                 <td className="px-4 py-3 text-center">
                   <span className="text-white/60 tabular-nums">{user._count.generatedAssets}</span>
                 </td>
-                <td className="px-4 py-3 text-center">
-                  {editingId === user.id ? (
-                    <input type="number" min={1} max={10} value={editForm?.maxConcurrentJobs || 1}
-                      onChange={e => setEditForm(f => f ? { ...f, maxConcurrentJobs: parseInt(e.target.value) || 1 } : f)}
-                      className="w-16 px-2 py-1 bg-white/5 border border-white/20 rounded text-center text-sm text-white"
-                    />
-                  ) : (
-                    <span className="text-white/60 tabular-nums">{user.maxConcurrentJobs}</span>
-                  )}
-                </td>
+
                 <td className="px-4 py-3 text-center">
                   {editingId === user.id ? (
                     <input type="number" min={1} max={999} value={editForm?.maxTotalGenerations || 3}

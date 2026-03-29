@@ -28,7 +28,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
   const [isReferenceExpanded, setIsReferenceExpanded] = useState<boolean>(true);
   const [currentAssetId, setCurrentAssetId] = useState<string | undefined>(undefined);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [quotaError, setQuotaError] = useState<'LIMIT_REACHED' | 'CONCURRENT_LIMIT' | null>(null);
+  const [quotaError, setQuotaError] = useState<'LIMIT_REACHED' | null>(null);
 
   // Status Change Effect
   useEffect(() => {
@@ -91,11 +91,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
                setQuotaError('LIMIT_REACHED');
                return;
             }
-            if (initResult.reason === 'CONCURRENT_LIMIT') {
-               setStatus('IDLE');
-               setQuotaError('CONCURRENT_LIMIT');
-               return;
-            }
+
             throw new Error(initResult.error || "Failed to initialize generation queue.");
          }
 
@@ -190,12 +186,10 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
                      onClick={() => { setQuotaError(null); startGenerationFlow(); }}
                      disabled={!!quotaError || status === 'GENERATING_PRIMARY' || status === 'GENERATING_SECONDARY' || status === 'COMPLETE'}
                      className={`relative font-medium px-8 py-2.5 rounded-full transition-all shadow-md overflow-hidden ${quotaError ? 'bg-black/5 dark:bg-white/5 text-[var(--text-tertiary)] cursor-not-allowed border border-black/5 dark:border-white/5 opacity-60' : status === 'IDLE' || status === 'ERROR' ? 'bg-black dark:bg-white text-white dark:text-black hover:-translate-y-0.5 hover:shadow-lg cursor-pointer' : status === 'COMPLETE' ? 'bg-[#00D084]/10 border border-[#00D084]/20 cursor-default shadow-none' : 'bg-black/5 dark:bg-white/5 text-[var(--text-tertiary)] cursor-not-allowed border border-black/5 dark:border-white/5'}`}
-                     title={quotaError === 'LIMIT_REACHED' ? 'Generation limit reached' : quotaError === 'CONCURRENT_LIMIT' ? 'Please wait for current generation to finish' : undefined}
+                     title={quotaError === 'LIMIT_REACHED' ? 'Generation limit reached' : undefined}
                  >
                      {quotaError === 'LIMIT_REACHED' ? (
                          <span className="relative z-10 flex items-center gap-2 text-sm">Generation Limit Reached</span>
-                     ) : quotaError === 'CONCURRENT_LIMIT' ? (
-                         <span className="relative z-10 flex items-center gap-2 text-sm">Please Wait for Current Job</span>
                      ) : status === 'IDLE' || status === 'ERROR' ? (
                          <span className="relative z-10 flex items-center gap-2">Initialize Canvas</span>
                      ) : (
@@ -242,7 +236,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
                        ) : (
                            <LayoutGrid className="w-5 h-5 text-zinc-500 mx-auto" />
                        )}
-                       {isReferenceExpanded && status === 'COMPLETE' && <span className="text-emerald-500 text-xs shrink-0">âœ“</span>}
+                       {isReferenceExpanded && status === 'COMPLETE' && <span className="text-emerald-500 text-xs shrink-0">âœ?/span>}
                    </button>
                    
                    {/* Collapsible Content */}

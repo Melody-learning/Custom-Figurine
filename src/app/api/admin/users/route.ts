@@ -30,7 +30,6 @@ export async function GET(request: NextRequest) {
         email: true,
         image: true,
         role: true,
-        maxConcurrentJobs: true,
         maxTotalGenerations: true,
         isWhitelisted: true,
         createdAt: true,

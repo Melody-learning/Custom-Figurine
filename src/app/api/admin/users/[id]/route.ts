@@ -13,11 +13,11 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { isWhitelisted, maxConcurrentJobs, maxTotalGenerations, role } = body;
+  const { isWhitelisted, maxTotalGenerations, role } = body;
 
   const data: any = {};
   if (isWhitelisted !== undefined) data.isWhitelisted = isWhitelisted;
-  if (maxConcurrentJobs !== undefined) data.maxConcurrentJobs = maxConcurrentJobs;
+
   if (maxTotalGenerations !== undefined) data.maxTotalGenerations = maxTotalGenerations;
   if (role !== undefined) data.role = role;
 
