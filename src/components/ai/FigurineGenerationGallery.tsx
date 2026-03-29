@@ -236,7 +236,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
                        ) : (
                            <LayoutGrid className="w-5 h-5 text-zinc-500 mx-auto" />
                        )}
-                       {isReferenceExpanded && status === 'COMPLETE' && <span className="text-emerald-500 text-xs shrink-0">âœ?/span>}
+                       {isReferenceExpanded && status === 'COMPLETE' && <span className="text-emerald-500 text-xs shrink-0">é‰?/span>}
                    </button>
                    
                    {/* Collapsible Content */}
