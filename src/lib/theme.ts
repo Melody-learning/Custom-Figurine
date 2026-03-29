@@ -22,14 +22,14 @@ export const themeConfig = {
   default: {
     name: 'Default',
     colors: {
-      primary: '#000000',
-      secondary: '#666666',
-      background: '#ffffff',
-      backgroundAlt: '#f8fafc',
+      primary: '#ffffff',
+      secondary: '#a0a0a0',
+      background: '#0a0a0a',
+      backgroundAlt: '#111111',
       accent: '#3b82f6',
-      border: 'rgba(226, 232, 240, 0.8)',
-      text: '#111827',
-      textMuted: '#6b7280',
+      border: 'rgba(255, 255, 255, 0.1)',
+      text: '#ededed',
+      textMuted: '#9ca3af',
     },
   },
   'neo-brutalist': {
