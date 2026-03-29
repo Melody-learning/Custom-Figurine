@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { useStore } from '@/lib/store';
-import HeroDebugUploader from './HeroDebugUploader';
+
 
 /* --- Mock Data --- */
 interface SceneData {
@@ -338,8 +338,6 @@ export default function HeroShowcase() {
         </div>
       </div>
 
-      {/* === TEMP DEBUG UPLOADER === */}
-      <HeroDebugUploader scenes={scenes} setScenes={setScenes} />
     </section>
   );
 }
