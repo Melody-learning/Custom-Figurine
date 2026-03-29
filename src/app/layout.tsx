@@ -26,7 +26,7 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
   return (
-    <html lang="en" suppressHydrationWarning className={`${outfit.variable} ${inter.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`dark ${outfit.variable} ${inter.variable}`}>
       <body className="font-sans antialiased min-h-screen flex flex-col">
         <Providers>
           <Header />
