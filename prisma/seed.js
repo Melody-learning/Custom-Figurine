@@ -80,6 +80,80 @@ async function main() {
     console.log(`✅ Seeded ${slides.length} Hero slides`);
   }
 
+  // === 3. Seed AI Models (upsert to avoid duplicates) ===
+  const aiModels = [
+    {
+      modelId: 'gemini-3.1-flash-image-preview',
+      name: 'Gemini 3.1 Flash',
+      description: 'Pro-level visual intelligence with Flash-speed efficiency',
+      provider: 'gemini',
+      isActive: true,
+      sortOrder: 0,
+      config: {},
+    },
+    {
+      modelId: 'gemini-3-pro-image-preview',
+      name: 'Gemini 3 Pro',
+      description: 'Highest quality image generation model',
+      provider: 'gemini',
+      isActive: true,
+      sortOrder: 1,
+      config: {},
+    },
+    {
+      modelId: 'gemini-2.5-flash-image',
+      name: 'Gemini 2.5 Flash',
+      description: 'Stable generation with free tier quota',
+      provider: 'gemini',
+      isActive: true,
+      sortOrder: 2,
+      config: {},
+    },
+    {
+      modelId: 'seedream-5.0-lite',
+      name: 'Seedream 5.0 Lite',
+      description: 'Latest Jimeng 5.0, high quality generation',
+      provider: 'jimeng',
+      isActive: true,
+      sortOrder: 10,
+      config: { endpointEnvKey: 'ARK_EP_SEEDREAM_5_0', minDimension: 1920 },
+    },
+    {
+      modelId: 'seedream-4.5',
+      name: 'Seedream 4.5',
+      description: 'Jimeng 4.5, excellent for Asian faces',
+      provider: 'jimeng',
+      isActive: true,
+      sortOrder: 11,
+      config: { endpointEnvKey: 'ARK_EP_SEEDREAM_4_5', minDimension: 1920 },
+    },
+    {
+      modelId: 'seedream-4.0',
+      name: 'Seedream 4.0',
+      description: 'Jimeng 4.0, multimodal image generation',
+      provider: 'jimeng',
+      isActive: true,
+      sortOrder: 12,
+      config: { endpointEnvKey: 'ARK_EP_SEEDREAM_4_0', minDimension: 1024 },
+    },
+  ];
+
+  for (const model of aiModels) {
+    await prisma.aiModel.upsert({
+      where: { modelId: model.modelId },
+      update: {
+        name: model.name,
+        description: model.description,
+        provider: model.provider,
+        isActive: model.isActive,
+        sortOrder: model.sortOrder,
+        config: model.config,
+      },
+      create: model,
+    });
+  }
+  console.log(`✅ Seeded/updated ${aiModels.length} AI models`);
+
   console.log('\n🎉 Seed complete!');
 }
 

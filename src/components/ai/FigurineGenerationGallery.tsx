@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { IMAGE_GENERATION_MODELS, ImageGenerationModelId } from '@/lib/constants/ai-models';
+import { useState, useEffect } from 'react';
 import { startAsyncGeneration } from '@/app/actions/start-generation';
-import { Loader2, ArrowLeft, Download, Rotate3D, LayoutGrid, ZoomIn } from 'lucide-react';
+import { Loader2, ArrowLeft, Download, Rotate3D, LayoutGrid } from 'lucide-react';
 import { ImageLightbox } from '@/components/ImageLightbox';
 
 interface FigurineGenerationGalleryProps {
@@ -20,7 +19,9 @@ type StepStatus = 'IDLE' | 'GENERATING_PRIMARY' | 'PRIMARY_SUCCESS' | 'GENERATIN
 export default function FigurineGenerationGallery({ subjectImageB64, originalImageForShowcase, initialViews, onCancel, onComplete, onStatusChange }: FigurineGenerationGalleryProps) {
   const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
   
-  const [selectedModel, setSelectedModel] = useState<ImageGenerationModelId>(IMAGE_GENERATION_MODELS[0].id);
+  // 从后台获取管理员配置的默认模型（第一个启用的模型）
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-3.1-flash-image-preview');
+  
   const [status, setStatus] = useState<StepStatus>(initialViews ? 'COMPLETE' : 'IDLE');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState<number>(0);
@@ -29,6 +30,20 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
   const [currentAssetId, setCurrentAssetId] = useState<string | undefined>(undefined);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [quotaError, setQuotaError] = useState<'LIMIT_REACHED' | null>(null);
+
+  // 自动获取后台配置的默认模型
+  useEffect(() => {
+    fetch('/api/ai-models')
+      .then(res => res.json())
+      .then(data => {
+        if (data.models && data.models.length > 0) {
+          setSelectedModel(data.models[0].modelId);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load default AI model, using fallback:', err);
+      });
+  }, []);
 
   // Status Change Effect
   useEffect(() => {
@@ -180,7 +195,6 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
              </div>
              
              <div>
-                 {/* Developer Note: Model Selection <select> was removed for production minimalism */}
                  <button 
                      onClick={() => { setQuotaError(null); startGenerationFlow(); }}
                      disabled={!!quotaError || status === 'GENERATING_PRIMARY' || status === 'GENERATING_SECONDARY' || status === 'COMPLETE'}

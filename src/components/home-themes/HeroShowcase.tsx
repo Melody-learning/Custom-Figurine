@@ -162,18 +162,20 @@ export default function HeroShowcase() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIndex]);
 
-  // Scroll active thumbnail into view
+  // Scroll active thumbnail into view (horizontal only — never affect page scroll)
   useEffect(() => {
-    if (carouselRef.current) {
-      const thumbs = carouselRef.current.children;
-      if (thumbs[activeIndex]) {
-        (thumbs[activeIndex] as HTMLElement).scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-          inline: 'nearest',
-        });
-      }
-    }
+    const container = carouselRef.current;
+    if (!container) return;
+    const thumb = container.children[activeIndex] as HTMLElement | undefined;
+    if (!thumb) return;
+
+    // Calculate the scroll position to center the active thumbnail
+    const thumbLeft = thumb.offsetLeft;
+    const thumbWidth = thumb.offsetWidth;
+    const containerWidth = container.offsetWidth;
+    const targetScroll = thumbLeft - containerWidth / 2 + thumbWidth / 2;
+
+    container.scrollTo({ left: targetScroll, behavior: 'smooth' });
   }, [activeIndex]);
 
   return (

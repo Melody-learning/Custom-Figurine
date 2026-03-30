@@ -88,7 +88,7 @@ export async function POST(req: Request) {
 
     const [primaryUrl, backUrl, sideUrl, showcaseUrl] = await Promise.all(uploadPromises);
 
-    // 4. Update Database to COMPLETE
+    // 4. Update Database to COMPLETE (记录使用的模型)
     await prisma.generatedAsset.update({
       where: { id: assetId },
       data: {
@@ -96,7 +96,8 @@ export async function POST(req: Request) {
          resultImage: primaryUrl as string,
          backImage: backUrl as string | null,
          sideImage: sideUrl as string | null,
-         showcaseImage: showcaseUrl as string | null
+         showcaseImage: showcaseUrl as string | null,
+         modelId: modelId,
       }
     });
 

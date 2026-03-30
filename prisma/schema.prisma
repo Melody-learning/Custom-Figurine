@@ -105,6 +105,7 @@ model GeneratedAsset {
   showcaseImage      String?  @db.Text  // 效果展示图 URL（提示词2 生成）
   prompt             String?  @db.Text
   baseModelVariantId String?
+  modelId            String?            // 实际使用的 AI 模型 ID
   status             GenerationStatus @default(COMPLETE) // Default true for legacy, handled in code
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -144,4 +145,21 @@ model HeroSlide {
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// ==============
+// AI MODEL CONFIGURATION
+// ==============
+
+model AiModel {
+  id          String   @id @default(cuid())
+  modelId     String   @unique              // API 模型标识符，如 "gemini-3.1-flash-image-preview"
+  name        String                        // 显示名称
+  description String?                       // 描述
+  provider    String                        // "gemini" | "jimeng"
+  isActive    Boolean  @default(true)       // 启用/禁用
+  sortOrder   Int      @default(0)          // 排序权重
+  config      Json?                         // 供应商特定配置 (如即梦的 endpointEnvKey)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

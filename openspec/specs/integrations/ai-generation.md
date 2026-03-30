@@ -45,17 +45,28 @@
 
 ## 2. 生图模型与供应商
 
-**当前供应商**：Google Gemini（通过 `@google/genai` 官方 SDK 直连）
+**供应商架构**：多供应商适配器模式（数据库驱动，通过 `AiModel` 表管理）
+
+### Google Gemini（通过 `@google/genai` 官方 SDK）
 
 | 模型 ID | 显示名称 | 说明 |
 |---------|---------|------|
-| `gemini-3.1-flash-image-preview` | Nano Banana 2 | Pro 级视觉默认选项 |
-| `gemini-3-pro-image-preview` | Nano Banana Pro | 最高质量生成 |
-| `gemini-2.5-flash-image` | Nano Banana | 初代稳定版 |
+| `gemini-3.1-flash-image-preview` | Gemini 3.1 Flash | Pro 级视觉默认选项 |
+| `gemini-3-pro-image-preview` | Gemini 3 Pro | 最高质量生成 |
+| `gemini-2.5-flash-image` | Gemini 2.5 Flash | 初代稳定版 |
 
-- 模型定义在 `src/lib/constants/ai-models.ts`
-- 前端展厅允许用户选择模型
-- 所有模型通过同一个 `callNativeGoogleImageAPI()` 统一调用，输出 1:1 正方形 1024px
+### 即梦 Seedream（通过火山方舟 Ark API v3）
+
+| 模型 ID | 显示名称 | 说明 | 最小像素 |
+|---------|---------|------|----------|
+| `seedream-5.0-lite` | Seedream 5.0 Lite | 最新即梦 5.0，高质量 | 1920px |
+| `seedream-4.5` | Seedream 4.5 | 擅长亚洲面孔 | 1920px |
+| `seedream-4.0` | Seedream 4.0 | 多模态生图 | 1024px |
+
+- 模型配置存储在 `AiModel` 数据库表中，通过 `/api/ai-models` 公开查询
+- 前端展厅通过 API 动态加载模型列表，按 provider 分组显示
+- 通过 `resolveAdapter(provider)` 工厂函数路由到对应适配器
+- 即梦每个模型需独立的 Endpoint ID（通过 `AiModel.config.endpointEnvKey` 映射到环境变量）
 
 ## 3. 环境变量
 
@@ -65,6 +76,10 @@
 | `HTTP_PROXY` | 后端 | 可选，反向代理地址（用于网络受限环境） |
 | `BLOB_READ_WRITE_TOKEN` | 后端 | Vercel Blob 存储令牌 |
 | `NEXT_PUBLIC_ENABLE_BG_REMOVAL` | 前后端 | Feature Flag，启用客户端抠图预处理 |
+| `ARK_API_KEY` | 后端 | 火山方舟 API Key（即梦生图） |
+| `ARK_EP_SEEDREAM_5_0` | 后端 | Seedream 5.0 Lite 接入点 ID |
+| `ARK_EP_SEEDREAM_4_5` | 后端 | Seedream 4.5 接入点 ID |
+| `ARK_EP_SEEDREAM_4_0` | 后端 | Seedream 4.0 接入点 ID |
 
 ## 4. 完整生图流程（异步 Webhook 架构）
 
@@ -133,18 +148,36 @@
 5. 超过 120 秒 → 超时终止轮询
 6. **Showcase tab** 条件渲染：仅在 `showcaseImage` 非空时显示第 4 个缩略图
 
-## 5. Gemini 生图核心实现
+## 5. 多供应商生图核心实现
+
+### 适配器架构
+
+文件：`src/lib/ai-adapters/`
+
+```
+ai-adapters/
+├── types.ts    — ImageAdapter 接口 + ImageGenParams 类型
+├── gemini.ts   — GeminiAdapter（@google/genai SDK）
+├── jimeng.ts   — JimengAdapter（火山方舟 Ark API v3）
+└── index.ts    — resolveAdapter() 工厂函数
+```
+
+### 统一调用流程
 
 文件：`src/app/actions/image-to-3d.ts`
 
-### 通用请求发射器 `callNativeGoogleImageAPI()`
-
 ```typescript
-// 签名: (prompt, modelName, baseImageB64?: string | string[]) => Promise<string>
-// 支持单图或多图输入（多图时按顺序附加到 parts 数组）
-// config: { imageConfig: { aspectRatio: "1:1", imageSize: "1K" } }
-// 支持可选 HTTP 代理隧道
+// callImageGenAPI(prompt, modelId, baseImageB64?)
+// 1. 查询 AiModel 表获取 provider + config
+// 2. resolveAdapter(provider) 获取适配器实例
+// 3. adapter.generateImage({ model, prompt, inputImageB64, adapterConfig })
 ```
+
+- Gemini: 通过 `@google/genai` SDK，支持 HTTP 代理隧道
+- 即梦: 通过原生 `fetch` 调用 `https://ark.cn-beijing.volces.com/api/v3/images/generations`
+  - Bearer Token 认证 (`ARK_API_KEY`)
+  - 参考图通过 `body.image = "data:image/png;base64,..."` 传入
+  - 自动处理最小像素要求（从 `config.minDimension` 读取）
 
 ### Prompt 工程
 
@@ -186,13 +219,20 @@ model GeneratedAsset {
 
 | 文件 | 职责 |
 |------|------|
-| `src/lib/constants/ai-models.ts` | 可用模型配置 |
+| `src/lib/ai-adapters/types.ts` | ImageAdapter 接口定义 |
+| `src/lib/ai-adapters/gemini.ts` | Gemini 适配器 |
+| `src/lib/ai-adapters/jimeng.ts` | 即梦/Seedream 适配器 |
+| `src/lib/ai-adapters/index.ts` | 适配器工厂函数 |
+| `src/lib/constants/ai-models.ts` | 回退模型列表 + 类型定义 |
 | `src/lib/remove-background.ts` | 客户端 WASM 抠图工具 |
 | `src/app/actions/start-generation.ts` | Server Action：触发异步生图 |
-| `src/app/actions/image-to-3d.ts` | Gemini API 调用封装 |
+| `src/app/actions/image-to-3d.ts` | 多供应商生图调用封装 |
 | `src/app/api/webhooks/generate/route.ts` | 后台 Webhook Worker |
+| `src/app/api/ai-models/route.ts` | 公开模型列表查询 API |
+| `src/app/api/admin/ai-models/route.ts` | Admin 模型管理 API |
 | `src/app/api/assets/[id]/route.ts` | 资产状态查询 API |
 | `src/components/ai/FigurineGenerationGallery.tsx` | 前端生图展厅组件 |
+| `prisma/seed.js` | 数据库初始化脚本（含6个默认模型） |
 
 ## 8. 已知限制与待办
 
@@ -201,3 +241,5 @@ model GeneratedAsset {
 - 背景移除（`@imgly/background-removal`）处于 Feature Flag 实验阶段
 - 低端移动设备的 WASM 抠图内存消耗需持续观察
 - 二、三视角的一致性依赖模型能力，偶有漂移
+- 即梦提示词为 Gemini 优化，可能需要针对即梦做 Prompt 适配
+- 即梦 API 延迟特征不同于 Gemini，需观察是否要调整 timeout

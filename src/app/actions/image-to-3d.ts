@@ -1,11 +1,7 @@
 'use server';
 
-import { GoogleGenAI } from "@google/genai";
-import { HttpsProxyAgent } from "https-proxy-agent";
-
-// We extract the base Gemini key as instructed.
-const API_KEY = process.env.GEMINI_API_KEY; 
-const PROXY_URL = process.env.HTTP_PROXY;
+import { resolveAdapter } from "@/lib/ai-adapters";
+import prisma from "@/lib/prisma";
 
 interface ImageGenResponse {
   b64_json?: string;
@@ -29,68 +25,36 @@ const PROMPT_BACK = "以上图为基准图（正面视图），生成该手办�
 const PROMPT_LEFT = "以上图为基准图（正面视图），生成该手办图的左侧视图。重要提示：保证人物100%的一致性，就像真实世界里存在这个手办，这个图片就是他的正视图，现在请你渲染左视角的照片。";
 
 // ============================================================
-// 核心通用图像生成请求发射器
+// 核心通用图像生成请求发射器 (多供应商)
 // ============================================================
-async function callNativeGoogleImageAPI(prompt: string, modelName: string, baseImageB64?: string | string[]): Promise<string> {
-   if (!API_KEY) {
-     throw new Error("GEMINI_API_KEY is not configured in .env.local");
-   }
 
-   // 建立反向代理客户端
-   const fetchOptions: any = {};
-   if (PROXY_URL) {
-      console.log(`[Google Image Gen] Tunneling through proxy: ${PROXY_URL}`);
-      const proxyAgent = new HttpsProxyAgent(PROXY_URL);
-      fetchOptions.agent = proxyAgent; 
-      fetchOptions.dispatcher = proxyAgent; 
-   }
+/**
+ * 根据 modelId 查询数据库获取 provider 和配置，调用对应适配器
+ */
+async function callImageGenAPI(
+  prompt: string,
+  modelId: string,
+  baseImageB64?: string | string[]
+): Promise<string> {
+  // 查询 AiModel 表获取 provider 和配置
+  const aiModel = await prisma.aiModel.findUnique({
+    where: { modelId },
+  });
 
-   const aiConfig: any = { apiKey: API_KEY as string };
-   if (Object.keys(fetchOptions).length > 0) {
-       aiConfig.httpOptions = {
-          fetch: async (url: string | URL | Request, options: RequestInit) => fetch(url, { ...options, ...fetchOptions } as RequestInit)
-       };
-   }
-   const ai = new GoogleGenAI(aiConfig);
+  // 如果数据库中没有该模型记录，回退到 gemini（向后兼容）
+  const provider = aiModel?.provider || "gemini";
+  const adapterConfig = (aiModel?.config as Record<string, unknown>) || {};
 
-   // 构建多模态载荷，结合文字和选填的图像
-   const parts: any[] = [{ text: prompt }];
-   
-   if (baseImageB64) {
-       const images = Array.isArray(baseImageB64) ? baseImageB64 : [baseImageB64];
-       for (const img of images) {
-           parts.push({
-               inlineData: {
-                   data: img,
-                   mimeType: "image/jpeg"
-               }
-           });
-       }
-   }
+  const adapter = resolveAdapter(provider);
 
-   // 发送大模型请求
-   // 适配全新 Gemini 3 图片模型高阶参数，直接强制 1K(1024) 比例
-   const response = await ai.models.generateContent({
-       model: modelName,
-       contents: parts,
-       config: {
-           // @ts-ignore - imageConfig is Gemini 3 image generation config
-           imageConfig: {
-               aspectRatio: "1:1",
-               imageSize: "1K"
-           }
-       }
-   });
-
-   // 解析响应体中的 Image Base64
-   const outParts = response.candidates?.[0]?.content?.parts || [];
-   const imagePart = outParts.find((p: any) => p.inlineData && p.inlineData.data);
-
-   if (imagePart && imagePart.inlineData && imagePart.inlineData.data) {
-       return imagePart.inlineData.data as string;
-   }
-
-   throw new Error("Google AI Studio did not return an inlineData image representation in the payload.");
+  return adapter.generateImage({
+    model: modelId,
+    prompt,
+    inputImageB64: baseImageB64,
+    aspectRatio: "1:1",
+    imageSize: "1K",
+    adapterConfig,
+  });
 }
 
 /**
@@ -98,7 +62,7 @@ async function callNativeGoogleImageAPI(prompt: string, modelName: string, baseI
  */
 export async function generatePrimaryRender(base64Image: string, modelId: string): Promise<ImageGenResponse> {
   try {
-     const resultBase64 = await callNativeGoogleImageAPI(PROMPT_PRIMARY, modelId, base64Image);
+     const resultBase64 = await callImageGenAPI(PROMPT_PRIMARY, modelId, base64Image);
      return { b64_json: resultBase64 };
   } catch (error: any) {
      console.error("[Stage 1 Error] Generating Primary Render:", error);
@@ -112,7 +76,7 @@ export async function generatePrimaryRender(base64Image: string, modelId: string
 export async function generateShowcaseImage(primaryImageB64: string, originalImageB64: string, modelId: string): Promise<ImageGenResponse> {
   try {
      // 两张输入图: [手办正视图, 用户原图]
-     const resultBase64 = await callNativeGoogleImageAPI(PROMPT_SHOWCASE, modelId, [primaryImageB64, originalImageB64]);
+     const resultBase64 = await callImageGenAPI(PROMPT_SHOWCASE, modelId, [primaryImageB64, originalImageB64]);
      return { b64_json: resultBase64 };
   } catch (error: any) {
      console.error("[Showcase Error] Generating Showcase Image:", error);
@@ -124,7 +88,7 @@ export async function generateShowcaseImage(primaryImageB64: string, originalIma
  * 阶段二：并行生成后视图 + 侧视图 + 效果展示图（3 路并行）
  * @param primaryImageBase64 - 正面手办图的 base64（用于后视图/侧视图）
  * @param originalImageB64 - 用户原始上传图的 base64（用于效果展示图）
- * @param modelId - Gemini 模型 ID
+ * @param modelId - AI 模型 ID
  */
 export async function generateSecondaryViews(primaryImageBase64: string, modelId: string, originalImageB64?: string) {
   try {
@@ -132,8 +96,8 @@ export async function generateSecondaryViews(primaryImageBase64: string, modelId
      console.log(`[Stage 2] Submitting 3-way parallel generation requests to ${modelId}...`);
      
      const promises: Promise<any>[] = [
-        callNativeGoogleImageAPI(PROMPT_BACK, modelId, primaryImageBase64),
-        callNativeGoogleImageAPI(PROMPT_LEFT, modelId, primaryImageBase64),
+        callImageGenAPI(PROMPT_BACK, modelId, primaryImageBase64),
+        callImageGenAPI(PROMPT_LEFT, modelId, primaryImageBase64),
      ];
 
      // 效果展示图：使用原始输入图，失败不阻塞其他视图
