@@ -9,10 +9,10 @@ import { upload } from '@vercel/blob/client';
 import { useSession } from 'next-auth/react';
 
 export function CartSidebar() {
-  const { cart, isCartOpen, setCartOpen, removeFromCart, updateQuantity } = useStore();
+  const { cart, isCartOpen, setCartOpen, removeFromCart, updateQuantity, clearCart } = useStore();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const { t: translate } = useTranslation();
-  const { config, theme } = useThemeConfig();
+  const { config } = useThemeConfig();
   const { data: session } = useSession();
 
   // Dynamically grant the discount if the backend user model has the coupon
@@ -49,7 +49,7 @@ export function CartSidebar() {
         // Client-side Vercel Blob Upload (bypasses 4.5MB Serverless limit)
         const newBlob = await upload(file.name, file, {
           access: 'public',
-          handleUploadUrl: '/api/upload-token', // We will create this secure route next
+          handleUploadUrl: '/api/upload-token',
         });
 
         return newBlob.url;
@@ -65,6 +65,10 @@ export function CartSidebar() {
         return {
           variantId: item.variantId,
           quantity: item.quantity,
+          title: item.title,
+          price: item.price,
+          originalImageUrl: originalImageUrl || undefined,
+          generatedImageUrl: aiImageUrl || undefined,
           customAttributes: [
             ...(aiImageUrl ? [{ key: '_AI Generated Image', value: aiImageUrl }] : []),
             ...(originalImageUrl ? [{ key: '_Uploaded Image', value: originalImageUrl }] : [])
@@ -75,7 +79,11 @@ export function CartSidebar() {
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: checkoutItems })
+        body: JSON.stringify({
+          items: checkoutItems,
+          discountCode: discountCode || undefined,
+          discountAmount: discountAmount || 0,
+        })
       });
       
       const data = await response.json();
@@ -84,31 +92,27 @@ export function CartSidebar() {
         throw new Error(data.details || data.error || 'Checkout API failed');
       }
       
+      // 清空购物车（在跳转前）
+      clearCart();
+
       let finalUrl = data.url;
-      if (discountCode) {
-        // Shopify Native feature: append ?discount=CODE to draft order checkout URL to auto-apply it.
+      // 如果不是开发模式且有优惠码，追加到 Shopify 结账 URL
+      if (discountCode && !data.devMode) {
         finalUrl += finalUrl.includes('?') ? `&discount=${discountCode}` : `?discount=${discountCode}`;
       }
       
       window.location.href = finalUrl;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Checkout error:', error);
-      alert(`${t('checkoutError')}: ${error.message || ''}`);
+      const message = error instanceof Error ? error.message : '';
+      alert(`${t('checkoutError')}: ${message}`);
     } finally {
       setIsCheckingOut(false);
     }
   };
 
   // 主题样式
-  const buttonStyle = theme === 'neo-brutalist'
-    ? 'border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-    : theme === 'elegant'
-    ? 'rounded-full bg-amber-900 hover:bg-amber-800'
-    : theme === 'editorial'
-    ? 'rounded-none bg-black hover:bg-gray-800 border-2 border-black'
-    : theme === 'watercolor'
-    ? 'rounded-2xl bg-rose-300 hover:bg-rose-400 shadow-md'
-    : 'rounded-full bg-black hover:bg-gray-800';
+  const buttonStyle = 'rounded-full bg-black hover:bg-gray-800';
 
   if (!isCartOpen) return null;
 

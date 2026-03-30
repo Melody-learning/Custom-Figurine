@@ -217,7 +217,8 @@ export interface Product {
 // 创建结账（底层改为使用 Admin API 生成带图片的 Draft Order 发票）
 export async function createCheckout(
   items: Array<{ variantId: string; quantity: number; customAttributes?: Array<{ key: string; value: string }> }>,
-  userId?: string
+  userId?: string,
+  localOrderId?: string
 ) {
   // Build the Draft Order using standard Variant IDs 
   // This ensures the predefined catalog image from Shopify is used on the Checkout page, avoiding a gray placeholder.
@@ -255,7 +256,11 @@ export async function createCheckout(
     return lineItemInput;
   });
 
+  // 注入 localOrderId（优先）和 userId 作为订单级 customAttributes
   const customAttributes = [];
+  if (localOrderId) {
+    customAttributes.push({ key: "localOrderId", value: localOrderId });
+  }
   if (userId) {
     customAttributes.push({ key: "userId", value: userId });
   }
@@ -286,5 +291,9 @@ export async function createCheckout(
     );
   }
 
-  return { webUrl: data.draftOrderCreate.draftOrder.invoiceUrl };
+  return {
+    webUrl: data.draftOrderCreate.draftOrder.invoiceUrl,
+    draftOrderId: data.draftOrderCreate.draftOrder.id,
+  };
 }
+

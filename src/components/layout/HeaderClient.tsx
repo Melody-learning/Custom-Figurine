@@ -1,12 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { ShoppingCart, Globe, Palette, UserCircle2 } from 'lucide-react';
+import { ShoppingCart, UserCircle2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { useTranslation } from '@/lib/useTranslation';
-import { useThemeConfig } from '@/lib/useTheme';
-import { themeConfig, Theme } from '@/lib/theme';
-import { useState } from 'react';
 import Image from 'next/image';
 import { AnimatedCouponBadge } from './AnimatedCouponBadge';
 
@@ -21,91 +18,46 @@ interface HeaderClientProps {
 
 export function HeaderClient({ user }: HeaderClientProps) {
   const { cart, setCartOpen, resetGenerationFlow } = useStore();
-  const { language, setLanguage, t: translate } = useTranslation();
-  const { theme, setTheme, config } = useThemeConfig();
+  const { t: translate } = useTranslation();
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const [showThemeMenu, setShowThemeMenu] = useState(false);
 
   const t = (key: string): string => translate(key as Parameters<typeof translate>[0]) as string;
 
-  const themes = Object.keys(themeConfig) as Theme[];
-
   return (
-    <header className="sticky top-0 z-50 w-full border-b backdrop-blur-md transition-colors bg-opacity-80" style={{ backgroundColor: config.colors.background, borderColor: config.colors.border }}>
+    <header className="sticky top-0 z-50 w-full border-b backdrop-blur-md transition-colors bg-opacity-80 bg-white" style={{ borderColor: 'rgba(226, 232, 240, 0.8)' }}>
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" onClick={() => resetGenerationFlow()} className="text-xl font-bold" style={{ color: config.colors.primary }}>
+        <Link href="/" onClick={() => resetGenerationFlow()} className="text-xl font-bold text-black">
           CustomFigurine
         </Link>
 
         <nav className="flex items-center gap-4">
-          <Link href="/" className="text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: config.colors.text }}>
+          <Link href="/" className="text-sm font-medium text-gray-900 hover:opacity-70 transition-opacity">
             {t('home')}
           </Link>
           <Link 
             href="/customize" 
             onClick={() => resetGenerationFlow()} 
-            className="text-sm font-medium hover:opacity-70 transition-opacity" 
-            style={{ color: config.colors.text }}
+            className="text-sm font-medium text-gray-900 hover:opacity-70 transition-opacity"
           >
             {t('customize')}
           </Link>
 
-          {/* Theme Switcher */}
-          <div className="relative">
-            <button
-              onClick={() => setShowThemeMenu(!showThemeMenu)}
-              className="flex items-center gap-1 rounded-lg p-2 hover:opacity-70 transition-opacity cursor-pointer"
-              style={{ color: config.colors.text }}
-            >
-              <Palette className="h-4 w-4" />
-            </button>
-            {showThemeMenu && (
-              <div className="absolute right-0 mt-2 w-40 rounded-lg border shadow-lg overflow-hidden" style={{ backgroundColor: config.colors.background, borderColor: config.colors.border }}>
-                {themes.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => {
-                      setTheme(t);
-                      setShowThemeMenu(false);
-                    }}
-                    className={`w-full px-4 py-3 text-left text-sm hover:opacity-70 transition-opacity cursor-pointer ${
-                      theme === t ? 'font-bold' : ''
-                    }`}
-                    style={{ color: theme === t ? config.colors.primary : config.colors.text, backgroundColor: theme === t ? config.colors.backgroundAlt : 'transparent' }}
-                  >
-                    {themeConfig[t].name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* Language Switcher */}
-          <button
-            onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
-            className="flex items-center gap-1 rounded-lg p-2 hover:opacity-70 transition-opacity cursor-pointer"
-            style={{ color: config.colors.text }}
-          >
-            <Globe className="h-4 w-4" />
-            <span className="text-sm font-medium">{language.toUpperCase()}</span>
-          </button>
 
           {/* Active Coupon Badge */}
           {user?.hasWelcomeCoupon && (
-            <AnimatedCouponBadge accentColor={config.colors.accent} />
+            <AnimatedCouponBadge accentColor="#3b82f6" />
           )}
 
           {/* Cart */}
           <button
             onClick={() => setCartOpen(true)}
-            className="relative flex items-center gap-2 text-sm font-medium hover:opacity-70 transition-opacity cursor-pointer"
-            style={{ color: config.colors.text }}
+            className="relative flex items-center gap-2 text-sm font-medium text-gray-900 hover:opacity-70 transition-opacity cursor-pointer"
           >
             <ShoppingCart className="h-5 w-5" />
             {cartCount > 0 && (
               <span
-                className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full text-xs text-white"
-                style={{ backgroundColor: config.colors.primary }}
+                className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full text-xs text-white bg-black"
               >
                 {cartCount}
               </span>
@@ -138,7 +90,7 @@ export function HeaderClient({ user }: HeaderClientProps) {
                   );
                })()
              ) : (
-               <Link href="/login" className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full border hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: config.colors.border, color: config.colors.text }}>
+               <Link href="/login" className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full border border-gray-200 text-gray-900 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                   <UserCircle2 className="w-4 h-4" />
                   <span>Log in</span>
                </Link>

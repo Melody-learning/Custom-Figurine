@@ -172,3 +172,5 @@ npx prisma db push   # 推送 Schema 变更
 - 重启后需先 `docker-compose up -d` 再 `npm run dev`
 - Vercel Serverless 有 4.5MB Payload 限制，图片必须客户端直传 Blob
 - 腾讯系邮箱会拦截 localhost Magic Link，需右键复制链接
+- [Dev Only] ImageLightbox 关闭时退出动画期间 `<img src="">` 触发 Next.js Dev 错误叠层（`intercept-console-error`），线上不影响。修复：在 `ImageLightbox.tsx` 中加 `{src && <img .../>}` 条件渲染
+- [Dev Only] 本地 `SHOPIFY_ADMIN_ACCESS_TOKEN` 可能过期（401），导致 checkout 流程失败。线上使用独立凭据不受影响，本地需去 Shopify Admin 后台重新生成 token

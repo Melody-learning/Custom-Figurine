@@ -18,6 +18,15 @@ enum Role {
   ADMIN
 }
 
+enum OrderStatus {
+  PENDING       // 已创建草稿订单，等待用户支付
+  PROCESSING    // 已支付，制作中（支付成功自动进入）
+  SHIPPED       // 已发货（Shopify Admin 标记 fulfilled）
+  DELIVERED     // 已签收
+  CANCELLED     // 已取消
+  REFUNDED      // 已退款
+}
+
 // ==============
 // NEXTAUTH V5 MODELS
 // ==============
@@ -31,7 +40,7 @@ model User {
   role             Role            @default(USER)
   hasWelcomeCoupon Boolean         @default(false)
   accounts         Account[]
-  sessions      Session[]
+  sessions         Session[]
   
   // Generation limits
   maxConcurrentJobs   Int      @default(1)      // 同时进行的生图任务上限
@@ -40,7 +49,7 @@ model User {
 
   // Custom Relations
   generatedAssets GeneratedAsset[]
-  storeOrders     StoreOrder[]
+  orders          Order[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -108,22 +117,74 @@ model GeneratedAsset {
   modelId            String?            // 实际使用的 AI 模型 ID
   status             GenerationStatus @default(COMPLETE) // Default true for legacy, handled in code
   
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[] // 被哪些订单项引用
 
   createdAt DateTime @default(now())
 }
 
-model StoreOrder {
-  id             String   @id @default(cuid())
-  shopifyOrderId String   @unique
-  userId         String
-  status         String   // "placed", "fulfilled", "cancelled"
-  trackingUrl    String?  @db.Text
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+// ==============
+// ORDER SYSTEM
+// ==============
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Order {
+  id                  String      @id @default(cuid())
+  orderNumber         String      @unique  // 人类友好编号，如 "CF-20260330-A3F2K8"
+  userId              String
+  status              OrderStatus @default(PENDING)
+
+  // Shopify 关联
+  shopifyDraftOrderId String?     @unique  // Draft Order 的 GID
+  shopifyOrderId      String?     @unique  // 正式订单 ID（支付后才有）
+  invoiceUrl          String?     @db.Text // Shopify 结账 URL
+
+  // 金额
+  subtotalAmount      Float                // 商品小计
+  discountCode        String?              // 优惠券代码
+  discountAmount      Float       @default(0)  // 折扣金额
+  totalAmount         Float                // 最终总价
+  currency            String      @default("USD")
+
+  // 物流
+  trackingNumber      String?
+  trackingUrl         String?     @db.Text
+  shippedAt           DateTime?
+  deliveredAt         DateTime?
+
+  // 时间线
+  paidAt              DateTime?
+  cancelledAt         DateTime?
+
+  // 关联
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items               OrderItem[]
+
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+}
+
+model OrderItem {
+  id                  String    @id @default(cuid())
+  orderId             String
+
+  // 商品信息（快照）
+  variantId           String            // Shopify variant GID
+  title               String            // 商品名称快照
+  price               Float             // 下单时单价
+  quantity            Int
+  size                String?           // "6cm" | "8cm" | "10cm" | "15cm"
+
+  // 定制信息
+  originalImageUrl    String?   @db.Text // 用户上传的原图 (Blob URL)
+  generatedImageUrl   String?   @db.Text // AI 生成的效果图 (Blob URL)
+  generatedAssetId    String?           // 关联到 GeneratedAsset（可选）
+  customInstructions  String?   @db.Text // 用户备注
+
+  // 关联
+  order               Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  generatedAsset      GeneratedAsset? @relation(fields: [generatedAssetId], references: [id])
+
+  createdAt           DateTime  @default(now())
 }
 
 // ==============

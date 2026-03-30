@@ -2,16 +2,15 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { PackageOpen, Sparkles, Loader2 } from "lucide-react";
-import type { GeneratedAsset, StoreOrder } from "@prisma/client";
+import { Sparkles } from "lucide-react";
 import { DynamicCouponCard } from "@/components/marketing/DynamicCouponCard";
 import GenerationVaultList from '@/components/profile/GenerationVaultList';
 import LogoutButton from '@/components/profile/LogoutButton';
+import OrderList from '@/components/profile/OrderList';
 
 export default async function ProfilePage() {
   const session = await auth();
   
-  // This is technically caught by middleware, but NextAuth recommends double-checking
   if (!session?.user?.id) {
     redirect("/login");
   }
@@ -24,10 +23,36 @@ export default async function ProfilePage() {
     orderBy: { createdAt: 'desc' },
   });
 
-  // Fetch the user's saved physical orders from Shopify Webhook Syncs
-  const physicalOrders = await prisma.storeOrder.findMany({
+  // Fetch the user's orders with item count and preview
+  const orders = await prisma.order.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },
+    include: {
+      items: {
+        select: {
+          id: true,
+          generatedImageUrl: true,
+          originalImageUrl: true,
+        },
+      },
+    },
+  });
+
+  // Transform orders for the client component
+  const orderList = orders.map((order) => {
+    const firstItem = order.items[0];
+    const previewImageUrl = firstItem?.generatedImageUrl || firstItem?.originalImageUrl || null;
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      totalAmount: order.totalAmount,
+      currency: order.currency,
+      itemCount: order.items.length,
+      previewImageUrl,
+      createdAt: order.createdAt.toISOString(),
+      paidAt: order.paidAt?.toISOString() || null,
+    };
   });
 
   // Computations for Avatar and Name Fallback
@@ -66,6 +91,7 @@ export default async function ProfilePage() {
         </div>
 
         {/* Coupon Asset Wall */}
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         {(session.user as any).hasWelcomeCoupon && (
           <DynamicCouponCard />
         )}
@@ -73,49 +99,8 @@ export default async function ProfilePage() {
         {/* Dashboards Stack */}
         <div className="flex flex-col gap-8">
            
-           {/* Top Section: Orders Tracking */}
-           <div className="space-y-6">
-               <div className="flex items-center gap-3">
-                 <div className="p-2 rounded-lg bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]">
-                    <PackageOpen className="w-5 h-5" />
-                 </div>
-                 <h2 className="text-2xl font-bold text-[var(--text-primary)]">Physical Figurine Orders</h2>
-              </div>
-              
-              {physicalOrders.length === 0 ? (
-                 <div className="w-full flex flex-col items-center justify-center p-8 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-sunken)]">
-                    <PackageOpen className="w-6 h-6 text-[var(--text-tertiary)] mb-3 opacity-50" />
-                    <p className="text-[var(--text-secondary)] text-center text-sm">No orders placed yet. Your figures are waiting to be birthed.</p>
-                 </div>
-              ) : (
-                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {physicalOrders.map((order: StoreOrder) => (
-                       <div key={order.id} className="p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] flex flex-col gap-4 shadow-sm">
-                          <div className="flex items-center justify-between">
-                             <span className="text-sm font-mono text-[var(--text-secondary)]">#{order.shopifyOrderId.slice(-6)}</span>
-                             <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${order.status === 'placed' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}>
-                                {order.status.toUpperCase()}
-                             </span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                             <div className="text-[var(--text-secondary)]">
-                                {new Date(order.createdAt).toLocaleDateString()}
-                             </div>
-                             {order.trackingUrl ? (
-                                <a href={order.trackingUrl} target="_blank" rel="noreferrer" className="text-[var(--brand-primary)] hover:underline font-medium flex items-center gap-1">
-                                   Track Package &rarr;
-                                </a>
-                             ) : (
-                                <span className="text-[var(--text-tertiary)] flex items-center gap-1 text-xs">
-                                   <Loader2 className="w-3 h-3 animate-spin" /> Preparing Box
-                                </span>
-                             )}
-                          </div>
-                       </div>
-                    ))}
-                 </div>
-              )}
-           </div>
+           {/* Top Section: Orders */}
+           <OrderList orders={orderList} />
 
            {/* Bottom Section: AI Gallery */}
            <div className="space-y-4 w-full">

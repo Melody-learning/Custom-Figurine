@@ -22,7 +22,7 @@ export default function CustomizePage() {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t: translate } = useTranslation();
-  const { config, theme } = useThemeConfig();
+  const { config } = useThemeConfig();
   const { data: session } = useSession();
   const router = useRouter();
 
@@ -395,64 +395,13 @@ export default function CustomizePage() {
   const product = products[0];
   const stepsList = t('steps');
 
-  // 获取主题样式
-  const getThemeStyles = () => {
-    if (theme === 'neo-brutalist') {
-      return {
-        button: 'border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all',
-        card: 'border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-white',
-        stepActive: 'bg-black text-white',
-        stepCompleted: 'bg-green-500 text-white',
-        stepInactive: 'bg-gray-200 text-gray-500',
-      };
-    }
-    if (theme === 'minimal') {
-      return {
-        button: 'bg-black text-white hover:bg-gray-800 rounded-none',
-        card: 'border border-gray-200 shadow-none rounded-none',
-        stepActive: 'bg-black text-white',
-        stepCompleted: 'bg-gray-500 text-white',
-        stepInactive: 'bg-gray-200 text-gray-400',
-      };
-    }
-    if (theme === 'elegant') {
-      return {
-        button: 'rounded-full bg-amber-900 text-white hover:bg-amber-800',
-        card: 'border border-stone-200 shadow-sm rounded-xl',
-        stepActive: 'bg-amber-900 text-white',
-        stepCompleted: 'bg-green-600 text-white',
-        stepInactive: 'bg-stone-200 text-stone-500',
-      };
-    }
-    if (theme === 'editorial') {
-      return {
-        button: 'rounded-none bg-black text-white hover:bg-gray-800 border-2 border-black',
-        card: 'border border-gray-300 shadow-sm rounded-none',
-        stepActive: 'bg-black text-white',
-        stepCompleted: 'bg-gray-600 text-white',
-        stepInactive: 'bg-gray-200 text-gray-500',
-      };
-    }
-    if (theme === 'watercolor') {
-      return {
-        button: 'rounded-2xl bg-rose-300 text-white hover:bg-rose-400 shadow-md',
-        card: 'border border-rose-200 shadow-md rounded-2xl',
-        stepActive: 'bg-rose-400 text-white',
-        stepCompleted: 'bg-teal-400 text-white',
-        stepInactive: 'bg-rose-200 text-rose-600',
-      };
-    }
-    // default
-    return {
-      button: 'rounded-full bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300',
-      card: 'rounded-2xl border shadow-lg bg-white/80 backdrop-blur-md animate-slide-up-fade',
-      stepActive: 'bg-black text-white shadow-md ring-4 ring-gray-100',
-      stepCompleted: 'bg-green-500 text-white shadow-md',
-      stepInactive: 'bg-gray-100 text-gray-400',
-    };
+  const styles = {
+    button: 'rounded-full bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300',
+    card: 'rounded-2xl border shadow-lg bg-white/80 backdrop-blur-md animate-slide-up-fade',
+    stepActive: 'bg-black text-white shadow-md ring-4 ring-gray-100',
+    stepCompleted: 'bg-green-500 text-white shadow-md',
+    stepInactive: 'bg-gray-100 text-gray-400',
   };
-
-  const styles = getThemeStyles();
 
   return (
     <main className={`min-h-screen relative overflow-hidden transition-all duration-700 ${step === 'generate' && galleryStatus === 'COMPLETE' ? 'py-4 sm:py-6' : 'py-12'}`} style={{ backgroundColor: config.colors.backgroundAlt }}>

@@ -11,9 +11,9 @@ import HeroShowcase from '@/components/home-themes/HeroShowcase';
 import React, { useState, useMemo } from 'react';
 
 export default function Home() {
-  const { t: translate, language } = useTranslation();
+  const { t: translate } = useTranslation();
   const { resetGenerationFlow } = useStore();
-  const { config, theme } = useThemeConfig();
+  const { config } = useThemeConfig();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [sliderPos, setSliderPos] = useState(50);
 
@@ -34,123 +34,47 @@ export default function Home() {
     return typeof value === 'string' ? value : key;
   };
 
-  const getThemeStyles = () => {
-    if (theme === 'neo-brutalist') {
-      return {
-        button: 'border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all',
-        card: 'border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-white',
-        section: 'bg-yellow-100',
-        sectionAlt: 'bg-white',
-      };
-    }
-    if (theme === 'minimal') {
-      return {
-        button: 'bg-black text-white hover:bg-gray-800 rounded-none',
-        card: 'border border-gray-200 shadow-none rounded-none',
-        section: '',
-        sectionAlt: 'bg-gray-50',
-      };
-    }
-    if (theme === 'elegant') {
-      return {
-        button: 'rounded-full bg-amber-900 text-white hover:bg-amber-800',
-        card: 'border border-stone-200 shadow-sm rounded-xl',
-        section: '',
-        sectionAlt: 'bg-stone-50',
-      };
-    }
-    if (theme === 'editorial') {
-      return {
-        button: 'rounded-none bg-black text-white hover:bg-gray-800 border-2 border-black',
-        card: 'border border-gray-300 shadow-sm rounded-none',
-        section: '',
-        sectionAlt: 'bg-gray-100',
-      };
-    }
-    if (theme === 'watercolor') {
-      return {
-        button: 'rounded-2xl bg-rose-300 text-white hover:bg-rose-400 shadow-md',
-        card: 'border border-rose-200 shadow-md rounded-2xl',
-        section: '',
-        sectionAlt: 'bg-amber-50',
-      };
-    }
-    // default
-    return {
-      button: 'rounded-full bg-black text-white hover:bg-gray-800 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300',
-      card: 'rounded-2xl border shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white/80 backdrop-blur-md',
-      section: '',
-      sectionAlt: 'bg-gray-50/50',
-    };
+  const styles = {
+    button: 'rounded-full bg-black text-white hover:bg-gray-800 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300',
+    card: 'rounded-2xl border shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white/80 backdrop-blur-md',
+    section: '',
+    sectionAlt: 'bg-gray-50/50',
   };
 
-  const styles = getThemeStyles();
-
-  // 绮鹃€夊弬鑰冨浘 (鎵嬪姙銆佺帺鍏锋ā鍨嬨€侀洉濉?
   const sampleImages = [
-    'https://images.unsplash.com/photo-1618336753974-aae8e04506aa?w=500&h=600&fit=crop', // 灏よ揪瀹濆疂妯″瀷
-    'https://images.unsplash.com/photo-1535295972055-1c762f4483e5?w=400&h=400&fit=crop', // 瀹囪埅鍛樼簿缁嗘ā鍨?
-    'https://images.unsplash.com/photo-1569003339405-ea396a5a8a90?w=400&h=400&fit=crop', // 鏈ㄨ川绱犳ā鍋囦汉
+    'https://images.unsplash.com/photo-1618336753974-aae8e04506aa?w=500&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1535295972055-1c762f4483e5?w=400&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1569003339405-ea396a5a8a90?w=400&h=400&fit=crop',
   ];
 
   const craftImages = [
-    'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop', // 3D Printing
-    'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400&h=300&fit=crop', // Hand Painting
-    'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?w=400&h=300&fit=crop', // Quality Check
-    'https://images.unsplash.com/photo-1607227063002-677dc5fdf96f?w=400&h=300&fit=crop', // Safe Packing
+    'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1607227063002-677dc5fdf96f?w=400&h=300&fit=crop',
   ];
 
   const scenarioImages = [
-    'https://images.unsplash.com/photo-1606836591695-4d58a73eba1e?w=500&h=400&fit=crop', // 绀肩墿鐩?
-    'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=500&h=400&fit=crop', // 瀹犵墿鐙?
-    'https://images.unsplash.com/photo-1606660265514-358ebbadc80d?w=500&h=400&fit=crop', // 鍔ㄦ极妯″瀷灞曠ず
-    'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=500&h=400&fit=crop', // 鍛婄櫧/鎯呬荆
+    'https://images.unsplash.com/photo-1606836591695-4d58a73eba1e?w=500&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=500&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1606660265514-358ebbadc80d?w=500&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=500&h=400&fit=crop',
   ];
 
-  // 鏍规嵁璇█鑾峰彇缈昏瘧鏁版嵁
-  const currentTranslations = language === 'zh' ? translations.zh : translations.en;
-
-  const craftList = currentTranslations.craftList || [
-    { title: '3D Printing', desc: 'Using advanced SLA/DLP technology, we print each figurine with layer precision of just 25 microns, ensuring every detail is captured perfectly.' },
-    { title: 'Hand Painting', desc: 'Our skilled artisans hand-paint each piece with precision, bringing your figurine to life with vibrant colors and meticulous attention to detail.' },
-    { title: 'Quality Check', desc: 'Every figurine undergoes rigorous multi-stage quality inspection to ensure it meets our highest standards before shipping.' },
-    { title: 'Safe Packing', desc: 'We use shock-proof packaging specifically designed for delicate figurines, ensuring safe delivery anywhere in the world.' }
-  ];
-
-  const processList = currentTranslations.processList || [
-    { title: 'AI Generation', desc: 'Our AI transforms your photo into a stunning 3D render' },
-    { title: '3D Modeling', desc: 'Create a precise digital model from the render' },
-    { title: '3D Printing', desc: 'Print with high-quality resin materials' },
-    { title: 'Hand Painting', desc: 'Paint with meticulous attention to detail' },
-    { title: 'Quality Check', desc: 'Ensure perfect quality through inspection' },
-    { title: 'Shipping', desc: 'Deliver safely to your door worldwide' }
-  ];
-
-  const faqList = currentTranslations.faqList || [
-    { q: 'How long does it take?', a: 'Typically 2-3 weeks including production and shipping. Express options available for urgent orders.' },
-    { q: 'What photo should I upload?', a: 'High-resolution, well-lit photos work best. Front-facing images with clear features produce the best results. Files up to 10MB accepted.' },
-    { q: 'What sizes are available?', a: 'We offer 4 sizes: 6cm (small), 8cm (medium), 10cm (large), and 15cm (extra large). Each size includes different level of detail.' },
-    { q: 'Do you ship internationally?', a: 'Yes! We ship worldwide with full tracking. Shipping times vary by location, typically 5-14 business days.' }
-  ];
-
-  const scenariosList = currentTranslations.scenariosList || [
-    'Birthday gifts for loved ones',
-    'Wedding & anniversary commemorations',
-    'Pet portraits preserved forever',
-    'Corporate branding & events',
-    'Fan art & character collection'
-  ];
+  const craftList = translations.en.craftList;
+  const processList = translations.en.processList;
+  const faqList = translations.en.faqList;
+  const scenariosList = translations.en.scenariosList;
 
   return (
     <main className="min-h-screen">
       {/* Hero Section - Showcase Carousel */}
       <HeroShowcase />
 
-      {/* 閫傜敤鍦烘櫙 - 鏀惧湪浜у搧浠嬬粛绗竴浣?*/}
+      {/* Scenarios Section */}
       <section className="py-24" style={{ backgroundColor: config.colors.background }}>
         <div className="container mx-auto px-4">
           <div className="grid items-center gap-12 md:grid-cols-2">
-            {/* 宸︿晶锛氭枃瀛?*/}
             <div>
               <h2 className="mb-6 text-3xl font-bold md:text-4xl" style={{ color: config.colors.text }}>{t('scenarios')}</h2>
               <p className="mb-8 text-lg" style={{ color: config.colors.textMuted }}>
@@ -168,7 +92,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 鍙充晶锛氬浘鐗囩綉鏍?*/}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-4">
                 <img src={scenarioImages[0]} alt="Gifts" className="w-full rounded-xl object-cover" style={{ height: '200px' }} />
@@ -183,7 +106,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 宸ヨ壓浠嬬粛 */}
+      {/* Craftsmanship Section */}
       <section className="py-24" style={{ backgroundColor: config.colors.backgroundAlt }}>
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center">
@@ -194,7 +117,7 @@ export default function Home() {
           </div>
 
           <div className="grid gap-8 md:grid-cols-2">
-            {craftList.map((item, i) => (
+            {craftList.map((item: { title: string; desc: string }, i: number) => (
               <div key={i} className={`flex gap-6 ${styles.card}`} style={{ backgroundColor: config.colors.background }}>
                 <div className="w-1/3 flex-shrink-0 overflow-hidden">
                   <img src={craftImages[i]} alt={item.title} className="h-full w-full object-cover" />
@@ -209,7 +132,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 鍒朵綔娴佺▼ - 鏃堕棿绾挎牱寮?*/}
+      {/* How It's Made - Timeline */}
       <section id="how-it-works" className="py-24" style={{ backgroundColor: config.colors.background }}>
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center">
@@ -219,9 +142,9 @@ export default function Home() {
             </p>
           </div>
 
-          {/* 绉诲姩绔細绠€鍗曞瀭鐩村垪琛?*/}
+          {/* Mobile: Simple vertical list */}
           <div className="space-y-6 md:hidden">
-            {processList.map((item, i) => (
+            {processList.map((item: { title: string; desc: string }, i: number) => (
               <div key={i} className={`flex items-start gap-4 ${styles.card}`} style={{ backgroundColor: config.colors.background }}>
                 <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-lg font-bold text-white" style={{ backgroundColor: config.colors.primary }}>
                   {i + 1}
@@ -234,16 +157,14 @@ export default function Home() {
             ))}
           </div>
 
-          {/* 妗岄潰绔細鏃堕棿绾垮竷灞€ */}
+          {/* Desktop: Timeline layout */}
           <div className="hidden md:block">
             <div className="relative mx-auto max-w-4xl">
-              {/* 涓棿杩炴帴绾?*/}
               <div className="absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2" style={{ backgroundColor: config.colors.border }} />
 
               <div className="space-y-8">
                 {processList.map((item: { title: string; desc: string }, i: number) => (
                   <div key={i} className="flex items-center justify-between">
-                    {/* 宸︿晶鍐呭 - 鍋舵暟 */}
                     <div className="w-[45%]">
                       {i % 2 === 0 && (
                         <div className={`text-right ${styles.card} p-4 mr-4`} style={{ backgroundColor: config.colors.background }}>
@@ -253,14 +174,12 @@ export default function Home() {
                       )}
                     </div>
 
-                    {/* 涓棿鍦嗙偣 */}
                     <div className="relative z-10 flex flex-shrink-0 items-center justify-center">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold text-white" style={{ backgroundColor: config.colors.primary }}>
                         {i + 1}
                       </div>
                     </div>
 
-                    {/* 鍙充晶鍐呭 - 濂囨暟 */}
                     <div className="w-[45%]">
                       {i % 2 !== 0 && (
                         <div className={`${styles.card} p-4 ml-4`} style={{ backgroundColor: config.colors.background }}>
@@ -277,14 +196,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 甯歌闂 - 绮剧畝鐗?*/}
+      {/* FAQ */}
       <section className="py-20" style={{ backgroundColor: config.colors.backgroundAlt }}>
         <div className="container mx-auto max-w-3xl px-4">
           <h2 className="mb-10 text-center text-3xl font-bold" style={{ color: config.colors.text }}>
             Frequently Asked Questions
           </h2>
           <div className="space-y-3">
-            {faqList.map((item, i) => (
+            {faqList.map((item: { q: string; a: string }, i: number) => (
               <div key={i} className={`cursor-pointer ${styles.card}`} style={{ backgroundColor: config.colors.background }} onClick={() => setOpenFaq(openFaq === i ? null : i)}>
                 <div className="flex items-center justify-between p-4">
                   <h3 className="font-medium" style={{ color: config.colors.text }}>{item.q}</h3>
