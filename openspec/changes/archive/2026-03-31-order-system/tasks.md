@@ -61,8 +61,8 @@
 ## 9. 验证与测试
 
 - [x] 9.1 本地启动开发服务器，测试完整的模拟支付流程：购物车 → checkout → 模拟支付页 → 点击支付成功 → Profile 查看订单 → 点击详情（自动化浏览器测试通过）
-- [ ] 9.2 本地测试订单取消流程：创建订单 → 在详情页取消
-- [ ] 9.3 部署到 Vercel，使用 Bogus Gateway 测试真实 Shopify 流程：购物车 → checkout → Shopify 结账页 → 用卡号 "1" 支付 → Webhook 回写 → Profile 查看订单
-- [ ] 9.4 在 Shopify Admin 后台标记订单 Fulfill → 确认独立站订单状态更新为 SHIPPED
+- [x] 9.2 本地测试订单取消流程：创建订单 → 在详情页取消（自动化浏览器测试通过）
+- [x] 9.3 部署到 Vercel，使用 Bogus Gateway 测试真实 Shopify 流程：购物车 → checkout → Shopify 结账页 → 用卡号 "1" 支付 → Webhook 回写 → Profile 查看订单（线上验证通过）
+- [x] 9.4 在 Shopify Admin 后台标记订单 Fulfill → 确认独立站订单状态更新为 SHIPPED（线上验证通过）
 
 > ✅ `next build` 构建通过 — 所有路由编译成功
