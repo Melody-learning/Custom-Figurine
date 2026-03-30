@@ -121,9 +121,13 @@ export default function AdminAiModelsPage() {
 
   const fetchModels = useCallback(async () => {
     setLoading(true);
-    const res = await fetch('/api/admin/ai-models');
-    const data = await res.json();
-    setModels(data || []);
+    try {
+      const res = await fetch('/api/admin/ai-models');
+      const data = await res.json();
+      setModels(Array.isArray(data) ? data : []);
+    } catch {
+      setModels([]);
+    }
     setLoading(false);
   }, []);
 
