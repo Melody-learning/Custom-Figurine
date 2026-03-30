@@ -5,19 +5,26 @@ import { updateOrderStatus } from '@/lib/order';
 import { OrderStatus } from '@prisma/client';
 
 export async function POST(req: Request) {
+  const logCtx: Record<string, unknown> = { timestamp: new Date().toISOString() };
+
   try {
     const rawBody = await req.text();
     const hmacHeader = req.headers.get('X-Shopify-Hmac-Sha256');
-    const topic = req.headers.get('X-Shopify-Topic'); // e.g., orders/create, orders/fulfilled, refunds/create
-    
-    // 1. Verify webhook HMAC signature
+    const topic = req.headers.get('X-Shopify-Topic');
+
+    logCtx.topic = topic;
+    logCtx.hmacPresent = !!hmacHeader;
+    logCtx.bodyLength = rawBody.length;
+
+    // 1. Verify HMAC
     const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
     if (!secret) {
-      console.error('SHOPIFY_WEBHOOK_SECRET is not configured.');
+      console.error('WEBHOOK ERROR: SHOPIFY_WEBHOOK_SECRET not configured', logCtx);
       return NextResponse.json({ error: 'Internal Configuration Error' }, { status: 500 });
     }
 
     if (!hmacHeader) {
+      console.error('WEBHOOK ERROR: Missing HMAC header', logCtx);
       return NextResponse.json({ error: 'Missing HMAC Header' }, { status: 401 });
     }
 
@@ -25,96 +32,128 @@ export async function POST(req: Request) {
       .createHmac('sha256', secret)
       .update(rawBody, 'utf8')
       .digest('base64');
-      
+
     if (generatedHash !== hmacHeader) {
-      console.error('Shopify Webhook HMAC verification failed');
+      console.error('WEBHOOK ERROR: HMAC mismatch', {
+        ...logCtx,
+        expected: generatedHash.slice(0, 10) + '...',
+        received: hmacHeader.slice(0, 10) + '...',
+      });
       return NextResponse.json({ error: 'Unauthorized payload' }, { status: 401 });
     }
+
+    logCtx.hmacVerified = true;
 
     // 2. Parse payload
     const payload = JSON.parse(rawBody);
 
-    // ========================================
-    // Handle: orders/create (支付成功 → PROCESSING)
-    // ========================================
+    // ============================================
+    // Handle: orders/create or orders/paid
+    // ============================================
     if (topic === 'orders/create' || topic === 'orders/paid') {
       const shopifyOrderId = payload.id?.toString();
+      logCtx.shopifyOrderId = shopifyOrderId;
+
       if (!shopifyOrderId) {
+        console.log('WEBHOOK: No order ID in payload, skipping', logCtx);
         return NextResponse.json({ received: true });
       }
 
-      // 从 custom_attributes (note_attributes) 提取 localOrderId
+      // 提取 localOrderId
       const localOrderId = extractAttribute(payload, 'localOrderId');
+      logCtx.localOrderId = localOrderId;
+      logCtx.noteAttributes = payload.note_attributes;
 
-      // 尝试查找本地订单
+      // 提取 draft_order_id（Shopify webhook payload 可能包含）
+      const draftOrderId = payload.draft_order_id?.toString();
+      logCtx.payloadDraftOrderId = draftOrderId;
+
+      // ---- 策略 1: 通过 localOrderId 查找 ----
       let order = localOrderId
         ? await prisma.order.findUnique({ where: { id: localOrderId } })
         : null;
+      logCtx.foundByLocalId = !!order;
 
-      // Fallback: 通过 shopifyOrderId 匹配（如果 localOrderId 找不到）
+      // ---- 策略 2: 通过 shopifyOrderId 查找 ----
       if (!order) {
         order = await prisma.order.findFirst({
-          where: { shopifyOrderId: shopifyOrderId },
+          where: { shopifyOrderId },
         });
+        logCtx.foundByShopifyOrderId = !!order;
+      }
+
+      // ---- 策略 3: 通过 shopifyDraftOrderId 查找 ----
+      if (!order && draftOrderId) {
+        // Shopify webhook 中的 draft_order_id 是数字 ID，但我们存的是 GID
+        const draftOrderGid = `gid://shopify/DraftOrder/${draftOrderId}`;
+        order = await prisma.order.findFirst({
+          where: { shopifyDraftOrderId: draftOrderGid },
+        });
+        logCtx.foundByDraftOrderId = !!order;
+        logCtx.draftOrderGid = draftOrderGid;
+      }
+
+      // ---- 策略 4: 通过 invoiceUrl 模糊匹配（最后手段）----
+      if (!order) {
+        // 查找最近的 PENDING 订单（同一用户、相近时间）
+        const recentPending = await prisma.order.findFirst({
+          where: { status: 'PENDING' },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (recentPending) {
+          order = recentPending;
+          logCtx.foundByRecentPending = true;
+          logCtx.recentPendingId = recentPending.id;
+        }
       }
 
       if (!order) {
-        console.log(`Webhook: Order not found for localOrderId=${localOrderId}, shopifyOrderId=${shopifyOrderId}. Skipping.`);
+        console.log('WEBHOOK: Order NOT found by any strategy', logCtx);
         return NextResponse.json({ received: true });
       }
 
-      // 仅 PENDING 状态可转为 PROCESSING
+      logCtx.matchedOrder = order.orderNumber;
+      logCtx.currentStatus = order.status;
+
+      // 更新状态
       if (order.status === 'PENDING') {
         await updateOrderStatus(order.id, OrderStatus.PROCESSING, {
-          shopifyOrderId: shopifyOrderId,
+          shopifyOrderId,
         });
-        console.log(`Webhook: Order ${order.orderNumber} → PROCESSING (Shopify ID: ${shopifyOrderId})`);
+        console.log(`WEBHOOK OK: ${order.orderNumber} → PROCESSING`, logCtx);
       } else {
-        // 如果还没有 shopifyOrderId，补上
         if (!order.shopifyOrderId) {
           await prisma.order.update({
             where: { id: order.id },
             data: { shopifyOrderId },
           });
         }
-        console.log(`Webhook: Order ${order.orderNumber} already in ${order.status}, skipping status update.`);
+        console.log(`WEBHOOK: ${order.orderNumber} already ${order.status}, skipped`, logCtx);
       }
 
       return NextResponse.json({ success: true });
     }
 
-    // ========================================
-    // Handle: orders/fulfilled (发货 → SHIPPED)
-    // ========================================
+    // ============================================
+    // Handle: orders/fulfilled
+    // ============================================
     if (topic === 'orders/fulfilled' || topic === 'orders/updated') {
       const shopifyOrderId = payload.id?.toString();
       if (!shopifyOrderId) {
         return NextResponse.json({ received: true });
       }
 
-      // 检查是否真的是 fulfilled
       if (payload.fulfillment_status !== 'fulfilled' && topic !== 'orders/fulfilled') {
         return NextResponse.json({ received: true });
       }
 
-      const localOrderId = extractAttribute(payload, 'localOrderId');
-
-      let order = localOrderId
-        ? await prisma.order.findUnique({ where: { id: localOrderId } })
-        : null;
+      const order = await findOrderByPayload(payload);
 
       if (!order) {
-        order = await prisma.order.findFirst({
-          where: { shopifyOrderId: shopifyOrderId },
-        });
-      }
-
-      if (!order) {
-        console.log(`Webhook fulfilled: Order not found for shopifyOrderId=${shopifyOrderId}. Skipping.`);
+        console.log(`WEBHOOK fulfilled: Order not found for shopifyOrderId=${shopifyOrderId}`, logCtx);
         return NextResponse.json({ received: true });
       }
 
-      // 提取物流信息
       let trackingNumber = null;
       let trackingUrl = null;
       if (payload.fulfillments && payload.fulfillments.length > 0) {
@@ -128,9 +167,8 @@ export async function POST(req: Request) {
           trackingNumber: trackingNumber || undefined,
           trackingUrl: trackingUrl || undefined,
         });
-        console.log(`Webhook: Order ${order.orderNumber} → SHIPPED (tracking: ${trackingNumber})`);
+        console.log(`WEBHOOK OK: ${order.orderNumber} → SHIPPED (tracking: ${trackingNumber})`);
       } else {
-        // 补充物流信息（即使状态已是 SHIPPED）
         if (trackingNumber || trackingUrl) {
           await prisma.order.update({
             where: { id: order.id },
@@ -140,15 +178,15 @@ export async function POST(req: Request) {
             },
           });
         }
-        console.log(`Webhook: Order ${order.orderNumber} already in ${order.status}, updated tracking info only.`);
+        console.log(`WEBHOOK: ${order.orderNumber} already ${order.status}, updated tracking only`);
       }
 
       return NextResponse.json({ success: true });
     }
 
-    // ========================================
-    // Handle: refunds/create (退款 → REFUNDED)
-    // ========================================
+    // ============================================
+    // Handle: refunds/create
+    // ============================================
     if (topic === 'refunds/create') {
       const shopifyOrderId = payload.order_id?.toString();
       if (!shopifyOrderId) {
@@ -156,39 +194,67 @@ export async function POST(req: Request) {
       }
 
       const order = await prisma.order.findFirst({
-        where: { shopifyOrderId: shopifyOrderId },
+        where: { shopifyOrderId },
       });
 
       if (!order) {
-        console.log(`Webhook refund: Order not found for shopifyOrderId=${shopifyOrderId}. Skipping.`);
+        console.log(`WEBHOOK refund: Order not found for shopifyOrderId=${shopifyOrderId}`);
         return NextResponse.json({ received: true });
       }
 
       if (order.status === 'PROCESSING') {
         await updateOrderStatus(order.id, OrderStatus.REFUNDED);
-        console.log(`Webhook: Order ${order.orderNumber} → REFUNDED`);
+        console.log(`WEBHOOK OK: ${order.orderNumber} → REFUNDED`);
       } else {
-        console.log(`Webhook: Order ${order.orderNumber} in ${order.status}, cannot refund. Skipping.`);
+        console.log(`WEBHOOK: ${order.orderNumber} in ${order.status}, cannot refund`);
       }
 
       return NextResponse.json({ success: true });
     }
 
-    // 未识别的 topic，安全返回
-    console.log(`Webhook: Unhandled topic ${topic}, ignoring.`);
+    console.log(`WEBHOOK: Unhandled topic "${topic}"`, logCtx);
     return NextResponse.json({ received: true });
 
   } catch (error) {
-    console.error('Webhook Processing Error:', error);
+    console.error('WEBHOOK FATAL ERROR:', error, logCtx);
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
 }
 
 // ========================================
-// Helper: 从 Shopify payload 中提取 custom attribute
+// 多策略查找订单
+// ========================================
+async function findOrderByPayload(payload: Record<string, unknown>) {
+  const shopifyOrderId = (payload.id as number)?.toString();
+  const localOrderId = extractAttribute(payload, 'localOrderId');
+  const draftOrderId = (payload.draft_order_id as number)?.toString();
+
+  // 策略 1: localOrderId
+  if (localOrderId) {
+    const order = await prisma.order.findUnique({ where: { id: localOrderId } });
+    if (order) return order;
+  }
+
+  // 策略 2: shopifyOrderId
+  if (shopifyOrderId) {
+    const order = await prisma.order.findFirst({ where: { shopifyOrderId } });
+    if (order) return order;
+  }
+
+  // 策略 3: draftOrderId → GID
+  if (draftOrderId) {
+    const gid = `gid://shopify/DraftOrder/${draftOrderId}`;
+    const order = await prisma.order.findFirst({ where: { shopifyDraftOrderId: gid } });
+    if (order) return order;
+  }
+
+  return null;
+}
+
+// ========================================
+// 从 Shopify payload 提取 custom attribute
 // ========================================
 function extractAttribute(payload: Record<string, unknown>, key: string): string | null {
-  // Shopify 的 custom attributes 可能在 note_attributes 或 custom_attributes 中
   const sources = [
     payload.note_attributes,
     payload.custom_attributes,

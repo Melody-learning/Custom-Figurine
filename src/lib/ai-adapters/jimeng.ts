@@ -66,6 +66,7 @@ export class JimengAdapter implements ImageAdapter {
       prompt: params.prompt,
       size: finalSize,
       response_format: "b64_json",
+      watermark: false, // 关闭即梦默认水印
     };
 
     // 参考图传入：将第一张图通过 image 字段传入
