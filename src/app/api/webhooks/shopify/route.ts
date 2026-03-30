@@ -93,20 +93,6 @@ export async function POST(req: Request) {
         logCtx.draftOrderGid = draftOrderGid;
       }
 
-      // ---- 策略 4: 通过 invoiceUrl 模糊匹配（最后手段）----
-      if (!order) {
-        // 查找最近的 PENDING 订单（同一用户、相近时间）
-        const recentPending = await prisma.order.findFirst({
-          where: { status: 'PENDING' },
-          orderBy: { createdAt: 'desc' },
-        });
-        if (recentPending) {
-          order = recentPending;
-          logCtx.foundByRecentPending = true;
-          logCtx.recentPendingId = recentPending.id;
-        }
-      }
-
       if (!order) {
         console.log('WEBHOOK: Order NOT found by any strategy', logCtx);
         return NextResponse.json({ received: true });
