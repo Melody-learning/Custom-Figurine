@@ -8,7 +8,9 @@ declare global {
   interface Window {
     Tawk_API?: {
       setAttributes?: (attrs: Record<string, string>, callback?: (error: unknown) => void) => void;
+      minimize?: () => void;
       onLoad?: () => void;
+      onChatMessageSystem?: (message: unknown) => void;
       customStyle?: {
         zIndex?: number;
       };
@@ -35,6 +37,13 @@ export function TawkToChat() {
       // Set z-index lower than cart sidebar (z-50) but above content
       window.Tawk_API.customStyle = {
         zIndex: 40,
+      };
+
+      // Suppress auto-popup: when Tawk auto-sends a system message
+      // (trigger), immediately minimize the widget so it doesn't
+      // pop open in the user's face
+      window.Tawk_API.onChatMessageSystem = () => {
+        window.Tawk_API?.minimize?.();
       };
 
       const script = document.createElement('script');

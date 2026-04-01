@@ -188,7 +188,7 @@ ai-adapters/
 - 输入：1 张图（抠图后优先，否则原图）
 - **[Phase 1]** 如果前端传入 `promptOverride`，则该默认值被覆盖。透传链路：
   `StylePreset.primaryPrompt` → `FigurineGenerationGallery (stylePrompt prop)` → `startAsyncGeneration (promptOverride)` → Webhook body → `generatePrimaryRender(promptOverride)` → `callImageGenAPI`
-- **[Phase 2]** 当前仍为常量文件 `src/lib/constants/style-presets.ts`，Phase 2 迁移至 DB + Admin 后台
+- **[Phase 2 ✅]** 提示词已迁移至 `StyleCategory`/`StylePreset` DB 表，通过 `/api/style-presets` 供前台读取，Admin 可在 `/admin/styles` 实时热更新，静态常量 `src/lib/constants/style-presets.ts` 作为降级兜底
 
 **提示词2 — 效果展示图（`PROMPT_SHOWCASE`，中文）**：
 > 将手办图中的手办模型放置在一张家用餐桌上，手办底座为透明亚克力，无任何文字。手办旁边放着原图和一支铅笔...
@@ -248,6 +248,6 @@ model GeneratedAsset {
 - 二、三视角的一致性依赖模型能力，偶有漂移
 - 即梦提示词为 Gemini 优化，可能需要针对即梦做 Prompt 适配
 - 即梦 API 延迟特征不同于 Gemini，需观察是否要调整 timeout
-- **[Phase 2 待办]** 后视图/侧视图提示词（PROMPT_BACK/PROMPT_LEFT）尚未按风格定制，仍为全局共享
-- **[Phase 2 待办]** StylePreset 未存储到 GeneratedAsset（Vault 中无法展示使用了哪个风格）
-- **[Phase 2 待办]** 风格配置迁移到 DB + Admin 后台 CRUD，包括示意图上传
+- **[Phase 3]** 后视图/侧视图提示词（PROMPT_BACK/PROMPT_LEFT）尚未按风格定制，仍为全局共享
+- **[Phase 3]** StylePreset ID 未记录到 GeneratedAsset，Vault 中无法展示使用了哪个风格
+- ~~**[Phase 2 待办]** 风格配置迁移到 DB + Admin 后台 CRUD，包括示意图上传~~ **[Phase 2 ✅ 已完成]** 详见 `openspec/specs/business/style-config.md`
