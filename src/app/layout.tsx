@@ -13,6 +13,7 @@ const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 import { LoginModal } from "@/components/auth/LoginModal";
+import { TawkToChat } from "@/components/TawkToChat";
 
 export const metadata: Metadata = {
   title: "Custom Figurine - Personalized 3D Prints",
@@ -37,6 +38,7 @@ export default async function RootLayout({
           <CartSidebar />
           {!session && <WelcomeModal />}
           <LoginModal />
+          <TawkToChat />
         </Providers>
         <Toaster position="bottom-left" theme="dark" richColors />
       </body>

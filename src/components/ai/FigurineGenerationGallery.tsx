@@ -9,6 +9,7 @@ interface FigurineGenerationGalleryProps {
   subjectImageB64: string;   // The cropped/processed base64 image (bg-removed if applicable)
   originalImageForShowcase?: string; // User's original upload (before bg removal) for showcase generation
   initialViews?: { primary: string, back: string, side: string, showcase?: string } | null;
+  stylePrompt?: string;      // 前端选中风格的主视图提示词（覆盖后端默认 PROMPT_PRIMARY）
   onCancel?: () => void;
   onComplete?: (generatedImages: { primary: string, back: string, side: string, showcase?: string }, generatedAssetId?: string) => void;
   onStatusChange?: (status: StepStatus) => void;
@@ -16,7 +17,7 @@ interface FigurineGenerationGalleryProps {
 
 type StepStatus = 'IDLE' | 'GENERATING_PRIMARY' | 'PRIMARY_SUCCESS' | 'GENERATING_SECONDARY' | 'COMPLETE' | 'ERROR';
 
-export default function FigurineGenerationGallery({ subjectImageB64, originalImageForShowcase, initialViews, onCancel, onComplete, onStatusChange }: FigurineGenerationGalleryProps) {
+export default function FigurineGenerationGallery({ subjectImageB64, originalImageForShowcase, initialViews, stylePrompt, onCancel, onComplete, onStatusChange }: FigurineGenerationGalleryProps) {
   const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
   
   // 从后台获取管理员配置的默认模型（第一个启用的模型）
@@ -98,6 +99,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
             processedImageB64: hasBgRemoved ? (cleanB64 ? `data:image/jpeg;base64,${cleanB64}` : undefined) : undefined,
             modelId: selectedModel,
             prompt: "Auto-generated 3D Render",
+            promptOverride: stylePrompt || undefined,
          });
 
          if (!initResult.success || !initResult.assetId) {

@@ -11,6 +11,7 @@ interface StartGenerationPayload {
   modelId: string;
   baseModelVariantId?: string;
   prompt?: string;
+  promptOverride?: string; // 前端选中风格的主视图提示词（覆盖后端默认 PROMPT_PRIMARY）
 }
 
 /**
@@ -131,7 +132,8 @@ export async function startAsyncGeneration(payload: StartGenerationPayload) {
            assetId: asset.id, 
            modelId: payload.modelId,
            originalImageUrl: blob.url,
-           processedImageUrl: processedBlobUrl
+           processedImageUrl: processedBlobUrl,
+           promptOverride: payload.promptOverride || null
         })
       }).then(res => {
          if (!res.ok) console.error(`[StartAsyncGeneration] Webhook fetch error: ${res.status} ${res.statusText}`);

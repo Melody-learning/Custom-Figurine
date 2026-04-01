@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Image, Users, Layers, ArrowLeft, Cpu } from 'lucide-react';
+import { BarChart3, Image, Users, Layers, ArrowLeft, Cpu, Palette } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: BarChart3, exact: true },
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/admin/hero', label: 'Hero Slides', icon: Image },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/ai-models', label: 'AI Models', icon: Cpu },
+  { href: '/admin/styles', label: 'Styles', icon: Palette },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

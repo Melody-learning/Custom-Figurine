@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, Sparkles, Loader2, ArrowRight, Check, Image as ImageIcon } from 'lucide-react';
+import { Upload, Sparkles, Loader2, ArrowRight, Check, Image as ImageIcon, Smile, Triangle, Box, Aperture } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { getProducts, Product, ProductVariant } from '@/lib/shopify';
 import { saveGeneratedAsset } from '@/app/actions/save-asset';
@@ -13,6 +13,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { removeImageBackground, isBgRemovalEnabled } from '@/lib/remove-background';
+import { STYLE_CATEGORIES, StylePreset, StyleCategory, getDefaultPreset } from '@/lib/constants/style-presets';
 
 type Step = 'upload' | 'generate' | 'select' | 'confirm';
 
@@ -25,6 +26,41 @@ export default function CustomizePage() {
   const { config } = useThemeConfig();
   const { data: session } = useSession();
   const router = useRouter();
+
+  // 风格数据（从 API 加载，fallback 到静态常量）
+  const [styleCategories, setStyleCategories] = useState<StyleCategory[]>(STYLE_CATEGORIES);
+  const [isLoadingStyles, setIsLoadingStyles] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/style-presets')
+      .then((r) => r.json())
+      .then((data: StyleCategory[]) => {
+        if (Array.isArray(data) && data.length > 0) setStyleCategories(data);
+      })
+      .catch(() => { /* 静默降级，保持 STYLE_CATEGORIES 静态常量 */ })
+      .finally(() => setIsLoadingStyles(false));
+  }, []);
+
+  // 辅助函数（从动态数组派生，替代静态辅助函数）
+  const findPresetById = (id: string): StylePreset | undefined => {
+    for (const cat of styleCategories) {
+      const found = cat.presets.find((p) => p.id === id);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  const findCategoryByPresetId = (id: string): StyleCategory | undefined =>
+    styleCategories.find((cat) => cat.presets.some((p) => p.id === id));
+
+  // 风格选取状态
+  const defaultPreset = getDefaultPreset();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(defaultPreset.categoryId);
+  const [selectedPresetId, setSelectedPresetId] = useState<string>(defaultPreset.id);
+
+  // 辅助计算值
+  const selectedPreset: StylePreset | undefined = findPresetById(selectedPresetId);
+  const selectedCategory = findCategoryByPresetId(selectedPresetId);
+  const selectedCategoryIsOrderable = selectedCategory?.isOrderable ?? true;
 
   // 简化的翻译函数，返回字符串
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -517,89 +553,198 @@ export default function CustomizePage() {
                         )}
                     </div>
 
-                    {/* BG Removal Before/After 对比条 */}
-                    {bgOriginal && !bgProcessing && bgOriginal !== uploadedImage && (
-                      <div className="flex gap-3 p-3 rounded-lg border border-dashed border-gray-300 bg-gray-50/80">
-                        <div className="flex-1 text-center">
-                          <p className="text-[10px] font-mono text-gray-400 mb-1">BEFORE</p>
-                          <ClickableImage src={bgOriginal} alt="Original" className="w-full h-32 object-contain rounded bg-white" />
-                        </div>
-                        <div className="flex-1 text-center">
-                          <p className="text-[10px] font-mono text-gray-400 mb-1">AFTER (BG Removed)</p>
-                          <ClickableImage src={uploadedImage} alt="Background Removed" className="w-full h-32 object-contain rounded" style={{backgroundImage: 'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)', backgroundSize: '12px 12px', backgroundPosition: '0 0, 0 6px, 6px -6px, -6px 0px'}} />
-                        </div>
-                      </div>
-                    )}
 
-                    {/* Smart Background Filter Toggle */}
-                    {isBgRemovalEnabled() && (
-                      <div className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50" style={{ borderColor: config.colors.border }}>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium" style={{ color: config.colors.text }}>
-                            {t('bgFilterTitle') || 'Smart Background Filter'}
-                          </span>
-                          <span className="text-[11px] opacity-60" style={{ color: config.colors.textMuted }}>
-                            {bgProcessing 
-                              ? 'Optimizing image...'
-                              : bgProcessed && bgFilterEnabled
-                                ? 'Background removed successfully'
-                                : (t('bgFilterDesc') || 'Automatically remove image background for better results')
-                            }
-                          </span>
-                        </div>
-                        {bgProcessing ? (
-                          /* 抠图中：显示小 loading 指示器（不可交互） */
-                          <div className="flex items-center gap-2 text-emerald-600">
-                            <div className="h-5 w-5 border-2 border-gray-200 border-t-emerald-500 rounded-full animate-spin" />
-                          </div>
-                        ) : (
-                          /* 抠图完成或未启用：可交互 Toggle */
+
+
+                    {/* ── BG Segmented Control ── */}
+                    {isBgRemovalEnabled() && bgOriginal && (() => {
+                      // 公共样式：选中/未选中
+                      const activeClass = 'bg-white dark:bg-white/10 shadow-sm';
+                      const inactiveClass = 'hover:bg-black/5 dark:hover:bg-white/5';
+
+                      return (
+                        <div
+                          className="relative flex rounded-2xl p-1 gap-1"
+                          style={{ backgroundColor: config.colors.backgroundAlt ?? '#f0f0f0' }}
+                        >
+                          {/* ── Original 段 ── */}
                           <button
                             type="button"
-                            role="switch"
-                            aria-checked={bgFilterEnabled}
+                            disabled={bgProcessing}
+                            onClick={() => { setBgFilterEnabled(false); setUploadedImage(bgOriginal); }}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold transition-all duration-200
+                              ${!bgFilterEnabled && !bgProcessing ? activeClass : inactiveClass}
+                              ${bgProcessing ? 'opacity-30 cursor-not-allowed' : ''}
+                            `}
+                            style={{ color: !bgFilterEnabled && !bgProcessing ? config.colors.text : config.colors.textMuted }}
+                          >
+                            <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+                            <span>Original</span>
+                          </button>
+
+                          {/* ── BG Removed 段 ── */}
+                          <button
+                            type="button"
+                            disabled={bgProcessing}
                             onClick={() => {
-                              if (bgFilterEnabled) {
-                                // 关闭：切回原图
-                                setBgFilterEnabled(false);
-                                if (bgOriginal) setUploadedImage(bgOriginal);
-                              } else {
-                                // 开启：有缓存秒切，无缓存重新跑 WASM
+                              if (bgProcessed) {
                                 setBgFilterEnabled(true);
-                                if (bgProcessed) {
-                                  setUploadedImage(bgProcessed);
-                                } else if (bgSourceRef.current && bgOriginal) {
-                                  // 无缓存但有 PNG 源图 → 重新执行抠图
-                                  bgCancelledRef.current = false;
-                                  setBgProcessing(true);
-                                  const pngSrc = bgSourceRef.current;
-                                  setTimeout(() => {
-                                    removeImageBackground(pngSrc).then(async (result) => {
-                                      setBgProcessing(false);
-                                      if (bgCancelledRef.current) {
-                                        console.log('[BgRemoval:ReToggle] Cancelled. Ignoring.');
-                                        return;
-                                      }
-                                      if (result.wasProcessed) {
-                                        const jpegResult = await downgradeToJpeg(result.processedImageUrl);
-                                        setBgProcessed(jpegResult);
-                                        setUploadedImage(jpegResult);
-                                      }
-                                    });
-                                  }, 50);
-                                }
+                                setUploadedImage(bgProcessed);
+                              } else if (bgSourceRef.current) {
+                                bgCancelledRef.current = false;
+                                setBgProcessing(true);
+                                setBgFilterEnabled(true);
+                                const pngSrc = bgSourceRef.current;
+                                setTimeout(() => {
+                                  removeImageBackground(pngSrc).then(async (result) => {
+                                    setBgProcessing(false);
+                                    if (bgCancelledRef.current) return;
+                                    if (result.wasProcessed) {
+                                      const jpegResult = await downgradeToJpeg(result.processedImageUrl);
+                                      setBgProcessed(jpegResult);
+                                      setUploadedImage(jpegResult);
+                                    }
+                                  });
+                                }, 50);
                               }
                             }}
-                            className={`cursor-pointer relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${bgFilterEnabled ? 'bg-[#00D084]' : 'bg-gray-300'}`}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold transition-all duration-200
+                              ${bgFilterEnabled || bgProcessing ? activeClass : inactiveClass}
+                              ${bgProcessing ? 'cursor-not-allowed' : ''}
+                            `}
+                            style={{ color: bgProcessing ? '#00b37a' : bgFilterEnabled && bgProcessed ? '#00b37a' : config.colors.textMuted }}
                           >
-                            <span
-                              className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${bgFilterEnabled ? 'translate-x-5' : 'translate-x-0'}`}
-                            />
+                            {bgProcessing ? (
+                              <>
+                                <span className="relative flex h-3 w-3 shrink-0">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-50" />
+                                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+                                </span>
+                                <span>Removing BG…</span>
+                              </>
+                            ) : bgProcessed ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 shrink-0" />
+                                <span>BG Removed</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                                <span>Remove BG</span>
+                              </>
+                            )}
                           </button>
-                        )}
-                      </div>
-                    )}
-                                        <div className="flex flex-col sm:flex-row gap-4 w-full">
+                        </div>
+                      );
+                    })()}
+
+                     {/* ===== 风格选取面板 ===== */}
+                     <div className="rounded-2xl border p-4 space-y-4" style={{ borderColor: config.colors.border }}>
+                       {/* 标题 */}
+                       <p className="text-[11px] font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: config.colors.primary }}>
+                         <span>✦</span> Choose Your Style
+                       </p>
+
+                       {/* 大类卡片 2x2 布局 — 加载中显示 skeleton */}
+                       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                         {isLoadingStyles
+                           ? [0,1,2,3].map((i) => (
+                               <div key={i} className="h-[108px] rounded-xl animate-pulse"
+                                 style={{ backgroundColor: config.colors.backgroundAlt ?? '#f0f0f0' }} />
+                             ))
+                           : styleCategories.map((cat) => {
+                           const iconMap: Record<string, React.ReactNode> = {
+                             Smile: <Smile className="w-6 h-6" />,
+                             Triangle: <Triangle className="w-6 h-6" />,
+                             Box: <Box className="w-6 h-6" />,
+                             Aperture: <Aperture className="w-6 h-6" />,
+                           };
+                           const isCatSelected = selectedCategoryId === cat.id;
+                           return (
+                             <button
+                               key={cat.id}
+                               type="button"
+                               onClick={() => {
+                                 setSelectedCategoryId(cat.id);
+                                 setSelectedPresetId(cat.presets[0].id);
+                               }}
+                               className={`relative flex flex-col items-center justify-center gap-2.5 py-4 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer
+                                 ${isCatSelected
+                                   ? 'scale-[1.03] shadow-md'
+                                   : 'border-transparent hover:scale-[1.01]'
+                                 }`}
+                               style={isCatSelected
+                                 ? { borderColor: cat.accentColor, backgroundColor: cat.accentColor + '18' }
+                                 : { backgroundColor: config.colors.backgroundAlt ?? '#f8f8f8' }
+                               }
+                             >
+                               {/* Preview Only 徽章 */}
+                               {!cat.isOrderable && (
+                                 <span className="absolute top-1.5 right-1.5 text-[8px] font-bold uppercase tracking-wider bg-gray-200/80 dark:bg-gray-700/80 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-full leading-none">
+                                   Preview
+                                 </span>
+                               )}
+                               {/* 图标圆圈 */}
+                               <div
+                                 className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-sm transition-all duration-200"
+                                 style={{ backgroundColor: isCatSelected ? cat.accentColor : cat.accentColor + 'aa' }}
+                               >
+                                 {iconMap[cat.icon] ?? <span className="text-lg font-bold">{cat.displayName.charAt(0)}</span>}
+                               </div>
+                               {/* 名称 + 子类圆点指示 */}
+                               <div className="flex flex-col items-center gap-1">
+                                 <span
+                                   className="text-xs font-bold tracking-wide transition-colors"
+                                   style={{ color: isCatSelected ? cat.accentColor : config.colors.textMuted }}
+                                 >
+                                   {cat.displayName}
+                                 </span>
+                               </div>
+                             </button>
+                           );
+                         })}
+                       </div>
+
+                        {/* 子类选择（含引导文字） */}
+                        {(() => {
+                          const activeCat = styleCategories.find(c => c.id === selectedCategoryId);
+                          if (!activeCat || activeCat.presets.length <= 1) return null;
+                          return (
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: activeCat.accentColor }}>
+                                <span className="opacity-60">└</span> Pick a variant
+                              </p>
+                              <div className="flex gap-2 flex-wrap">
+                                {activeCat.presets.map((preset) => {
+                                  const isPresetSelected = selectedPresetId === preset.id;
+                                  return (
+                                    <button
+                                      key={preset.id}
+                                      type="button"
+                                      onClick={() => setSelectedPresetId(preset.id)}
+                                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all duration-150
+                                        ${isPresetSelected
+                                          ? 'text-white border-transparent shadow-sm scale-[1.02]'
+                                          : 'hover:scale-[1.01]'
+                                        }`}
+                                      style={isPresetSelected
+                                        ? { backgroundColor: activeCat.accentColor, borderColor: activeCat.accentColor }
+                                        : { borderColor: activeCat.accentColor + '50', color: activeCat.accentColor, backgroundColor: activeCat.accentColor + '10' }
+                                      }
+                                    >
+                                      {isPresetSelected && <Check className="w-3 h-3" />}
+                                      {preset.name}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                     </div>
+                     {/* ===== 风格选取面板 END ===== */}
+
+                      <div className="flex flex-col sm:flex-row gap-4 w-full">
                         <button
                           onClick={() => {
                             setUploadedImage(null);
@@ -636,6 +781,7 @@ export default function CustomizePage() {
              <FigurineGenerationGallery 
                 subjectImageB64={uploadedImage}
                  originalImageForShowcase={bgOriginal || uploadedImage}
+                stylePrompt={selectedPreset?.primaryPrompt}
                 initialViews={generatedViews}
                 onCancel={() => {
                    if (editingVaultAssetId) {
@@ -758,12 +904,18 @@ export default function CustomizePage() {
               </button>
               <button
                 onClick={() => setStep('confirm')}
-                disabled={!selectedVariant}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 font-medium ${styles.button} disabled:opacity-50`}
+                disabled={!selectedVariant || !selectedCategoryIsOrderable}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 font-medium ${styles.button} disabled:opacity-40 disabled:cursor-not-allowed`}
+                title={!selectedCategoryIsOrderable ? 'Realistic style is currently not available for order.' : undefined}
               >
                 {t('continueBtn')} <ArrowRight className="h-5 w-5" />
               </button>
             </div>
+            {!selectedCategoryIsOrderable && (
+              <p className="mt-3 text-xs text-center font-medium text-amber-600 dark:text-amber-400">
+                ⚠️ Realistic style is currently for preview only and cannot be ordered.
+              </p>
+            )}
           </div>
         )}
 
@@ -850,13 +1002,25 @@ export default function CustomizePage() {
                           <Sparkles className="w-5 h-5" /> Create Another Figurine
                         </button>
                     </div>
-                ) : (
+                ) : selectedCategoryIsOrderable ? (
                     <button
                       onClick={handleAddToCart}
                       className={`flex w-full items-center justify-center gap-2 py-4 mt-4 text-lg font-medium ${styles.button}`}
                     >
                       {t('addToCart')}
                     </button>
+                ) : (
+                    <div className="mt-4 space-y-2">
+                      <button
+                        disabled
+                        className="flex w-full items-center justify-center gap-2 py-4 text-lg font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60"
+                      >
+                        {t('addToCart')} — Not Available
+                      </button>
+                      <p className="text-xs text-center text-amber-600 dark:text-amber-400 font-medium">
+                        ⚠️ Realistic style is for preview only. Switch to Cartoon, Low-Poly or Sculpture to order.
+                      </p>
+                    </div>
                 )}
               </div>
             </div>

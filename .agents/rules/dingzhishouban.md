@@ -166,7 +166,10 @@ npm run start        # 生产服务器
 npm run lint         # ESLint
 docker-compose up -d # 启动本地 Postgres（重启后需手动执行）
 npx prisma db push   # 推送 Schema 变更
+vercel logs --since 30m  # 查看线上服务端日志（已 link 到 custom-figurine）
 ```
+
+> 排查线上问题时，AI 应先 `vercel logs` 获取服务端日志再分析。
 
 ## 已知问题
 - 重启后需先 `docker-compose up -d` 再 `npm run dev`

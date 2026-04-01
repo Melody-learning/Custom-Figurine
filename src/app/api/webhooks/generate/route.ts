@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   let assetIdToFail = '';
   
   try {
-    const { assetId, modelId, originalImageUrl, processedImageUrl } = await req.json();
+    const { assetId, modelId, originalImageUrl, processedImageUrl, promptOverride } = await req.json();
 
     if (!assetId || !modelId || !originalImageUrl) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -61,8 +61,8 @@ export async function POST(req: Request) {
       }
     }
 
-    // 1. Generate Primary Render (提示词1 — 使用抠图后图片优先)
-    const primaryResult = await generatePrimaryRender(primaryInputBase64, modelId);
+    // 1. Generate Primary Render (提示词1 — 使抠图后图片优先，支持前端风格提示词覆盖)
+    const primaryResult = await generatePrimaryRender(primaryInputBase64, modelId, promptOverride || undefined);
     if (primaryResult.error || !primaryResult.b64_json) {
        console.error(`[Webhook:Generate] PRIMARY RENDER FAILED. Error: ${primaryResult.error}`);
        throw new Error(primaryResult.error || "Failed primary render");

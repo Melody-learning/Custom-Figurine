@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Loader2, Sparkles, Trash2, CalendarHeart, ShoppingCart } from 'lucide-react';
+import { Loader2, Sparkles, Trash2, CalendarHeart, ShoppingCart, AlertTriangle } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { deleteGeneratedAsset } from '@/app/actions/delete-asset';
 import { toast } from 'sonner';
@@ -27,6 +27,18 @@ export default function GenerationVaultList({ initialAssets }: GenerationVaultLi
   const [assets, setAssets] = useState<Asset[]>(initialAssets);
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [clearingStale, setClearingStale] = useState(false);
+
+  // 超过 2 小时的 PENDING 资产视为 “Stale”，直接展示为失败状态
+  const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2小时
+  const isStale = (asset: Asset): boolean => {
+    if (asset.status !== 'PENDING') return false;
+    if (!asset.createdAt) return true; // 无时间戳的也不信任
+    const age = Date.now() - new Date(asset.createdAt).getTime();
+    return age > STALE_THRESHOLD_MS;
+  };
+  const staleAssets = assets.filter(isStale);
+  const failedAssets = assets.filter(a => a.status === 'FAILED' || (failedImageIds.has(a.id) && !isStale(a)));
   
   const router = useRouter();
   const { setUploadedImage, setGeneratedImage, setGeneratedViews, setGenerationStatus, setEditingVaultAssetId } = useStore();
@@ -110,6 +122,22 @@ export default function GenerationVaultList({ initialAssets }: GenerationVaultLi
      }
   };
 
+  // 批量删除失败/挂起的异常记录
+  const handleClearStale = async () => {
+    const targets = assets.filter(a => isStale(a) || a.status === 'FAILED' || failedImageIds.has(a.id));
+    if (targets.length === 0) return;
+    try {
+      setClearingStale(true);
+      await Promise.all(targets.map(a => deleteGeneratedAsset(a.id)));
+      setAssets(prev => prev.filter(a => !targets.some(t => t.id === a.id)));
+      toast.success(`Cleared ${targets.length} incomplete record${targets.length > 1 ? 's' : ''}.`);
+    } catch {
+      toast.error('Failed to clear some records.');
+    } finally {
+      setClearingStale(false);
+    }
+  };
+
   if (assets.length === 0) {
     return (
        <div className="w-full flex flex-col items-center justify-center p-12 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-sunken)]">
@@ -119,30 +147,58 @@ export default function GenerationVaultList({ initialAssets }: GenerationVaultLi
     );
   }
 
+  // 有失败/挂起记录时展示清理按鈕
+  const hasAbnormal = assets.some(a => isStale(a) || a.status === 'FAILED' || failedImageIds.has(a.id));
+
   return (
-     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+     <div className="space-y-4">
+       {/* 清理异常记录提示栏 */}
+       {hasAbnormal && (
+         <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+           <div className="flex items-center gap-2 text-sm text-amber-400">
+             <AlertTriangle className="w-4 h-4 shrink-0" />
+             <span>{staleAssets.length + (assets.filter(a => a.status === 'FAILED').length)} incomplete generation{(staleAssets.length + assets.filter(a => a.status === 'FAILED').length) > 1 ? 's' : ''} found</span>
+           </div>
+           <button
+             onClick={handleClearStale}
+             disabled={clearingStale}
+             className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-colors"
+           >
+             {clearingStale ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Clear All'}
+           </button>
+         </div>
+       )}
+       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {assets.map((asset) => {
            if (asset.status === 'PENDING') {
-              return (
-                 <div key={asset.id} className="group relative rounded-2xl overflow-hidden bg-[var(--surface-sunken)] border border-dashed border-[var(--border-subtle)] p-3 flex flex-col justify-center items-center min-h-[300px] gap-4">
-                   <Loader2 className="w-8 h-8 text-[var(--brand-primary)] animate-spin" />
-                   <div className="text-center">
-                      <p className="font-medium text-[var(--text-primary)] mb-1">Asset Generation in Progress</p>
-                      <p className="text-xs text-[var(--text-tertiary)]">The VLM is currently rendering 3D views.</p>
+              // 超时的 PENDING 直接当失败展示（下面的 FAILED 递归就会处理）
+              if (isStale(asset)) {
+                // fall through to the failed check below
+              } else {
+                return (
+                   <div key={asset.id} className="group relative rounded-2xl overflow-hidden bg-[var(--surface-sunken)] border border-dashed border-[var(--border-subtle)] p-3 flex flex-col justify-center items-center min-h-[300px] gap-4">
+                     <Loader2 className="w-8 h-8 text-[var(--brand-primary)] animate-spin" />
+                     <div className="text-center">
+                        <p className="font-medium text-[var(--text-primary)] mb-1">Asset Generation in Progress</p>
+                        <p className="text-xs text-[var(--text-tertiary)]">The VLM is currently rendering 3D views.</p>
+                     </div>
                    </div>
-                 </div>
-              );
+                );
+              }
            }
 
            const views = [];
            const isValidResult = asset.resultImage && asset.resultImage !== "null" && asset.resultImage.trim() !== '';
+           
+           // 判断是否展示失败态（FAILED 或 stale PENDING 或 resultImage 缺失）
+           const showAsFailed = asset.status === 'FAILED' || isStale(asset) || failedImageIds.has(asset.id) || !isValidResult;
            
            if (isValidResult) views.push(asset.resultImage);
            if (asset.sideImage && asset.sideImage !== "null") views.push(asset.sideImage);
            if (asset.backImage && asset.backImage !== "null") views.push(asset.backImage);
 
            // Handle corrupted/failed states where status is complete but images are missing/broken
-           if (!isValidResult || asset.status === 'FAILED' || failedImageIds.has(asset.id)) {
+           if (showAsFailed) {
               return (
                  <div key={asset.id} className="group relative rounded-2xl overflow-hidden bg-[var(--surface-sunken)] border border-dashed border-[var(--border-subtle)] p-4 flex flex-col justify-center items-center min-h-[350px] gap-3 transition-opacity">
                    <div className="w-8 h-8 rounded shrink-0 bg-white/5 flex items-center justify-center text-[var(--text-tertiary)]">
@@ -252,6 +308,7 @@ export default function GenerationVaultList({ initialAssets }: GenerationVaultLi
               </div>
            );
         })}
+       </div>
      </div>
   );
 }

@@ -60,9 +60,11 @@ async function callImageGenAPI(
 /**
  * 阶段一：基于输入图（抠图后优先）生成正面手办产品照
  */
-export async function generatePrimaryRender(base64Image: string, modelId: string): Promise<ImageGenResponse> {
+export async function generatePrimaryRender(base64Image: string, modelId: string, promptOverride?: string): Promise<ImageGenResponse> {
   try {
-     const resultBase64 = await callImageGenAPI(PROMPT_PRIMARY, modelId, base64Image);
+     const prompt = promptOverride && promptOverride.trim() ? promptOverride : PROMPT_PRIMARY;
+     console.log(`[Stage 1] Using prompt override: ${!!promptOverride}`);
+     const resultBase64 = await callImageGenAPI(prompt, modelId, base64Image);
      return { b64_json: resultBase64 };
   } catch (error: any) {
      console.error("[Stage 1 Error] Generating Primary Render:", error);

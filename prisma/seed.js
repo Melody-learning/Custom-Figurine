@@ -154,6 +154,88 @@ async function main() {
   }
   console.log(`✅ Seeded/updated ${aiModels.length} AI models`);
 
+  // === 4. Seed Style Categories + Presets (upsert by slug) ===
+  const PROMPT_CARTOON_STANDARD = `A professional studio product shot of a 1/7 scale premium ACG figurine featuring the characters in the reference image. The style is a modern pop-art blind box aesthetic, similar to trendy designer toys. The sculpting emphasizes ultra-smooth, rounded forms, simplified chunky hair volumes, and exaggerated cute proportions (1:4 head-to-body ratio). The color palette uses solid, vibrant pastel colors with a glossy porcelain-like finish, avoiding micro-details to ensure extremely clean and easy manufacturing. The characters feature expressive, simplified anime-style faces and distinctly stylized, thick clothing folds optimized for physical production. They are standing on a simple, elegant display base under soft studio lighting that perfectly highlights the smooth material texture. High resolution, masterpiece, official merchandise photography.`;
+  const PROMPT_CARTOON_CHIBI = `A professional studio product shot of a premium ACG figurine featuring the characters in the reference image. The style is a modern pop-art blind box aesthetic. The body proportions are highly stylized into a cute chibi 1:3 head-to-body ratio, featuring short stubby limbs, chubby cheeks, and ultra-smooth, rounded forms without any realistic muscle definitions. The color palette uses solid, vibrant pastel colors with a glossy porcelain-like finish. The characters feature simplified, exaggerated cute anime faces with large, decal-like round eyes and tiny noses. The chunky hair volumes and distinctly thick clothing folds are optimized for clean manufacturing. They are standing on a simple, elegant display base under soft studio lighting. High resolution, masterpiece, official merchandise photography.`;
+  const PROMPT_LOWPOLY_STANDARD = `TODO: Low-poly standard style prompt — to be configured by admin.`;
+  const PROMPT_LOWPOLY_ROUGH = `TODO: Low-poly rough/raw style prompt — to be configured by admin.`;
+  const PROMPT_SCULPTURE_STANDARD = `TODO: Sculpture standard style prompt — to be configured by admin.`;
+  const PROMPT_SCULPTURE_FACELESS = `TODO: Faceless sculpture style prompt — to be configured by admin.`;
+  const PROMPT_REALISTIC_STANDARD = `A professional studio product shot of a 1/7 scale premium ACG figurine featuring the characters in the reference image. The style is a highly detailed, mature stylized anime aesthetic. The figurine showcases masterful sculpting with crisp, clean edges, smooth matte skin, and vibrant, solid coloring. The characters feature expressive anime-style faces and distinct, stylized hair and clothing folds optimized for physical production. They are standing on a simple, elegant display base under soft studio lighting that perfectly highlights the PVC material texture. High resolution, masterpiece, official merchandise photography.`;
+
+  const styleCategories = [
+    {
+      slug: 'cartoon',
+      displayName: 'Cartoon',
+      name: '卡通风格',
+      isOrderable: true,
+      accentColor: '#FF6B9D',
+      icon: 'Smile',
+      sortOrder: 0,
+      presets: [
+        { slug: 'cartoon-standard', name: 'Standard', primaryPrompt: PROMPT_CARTOON_STANDARD, sortOrder: 0 },
+        { slug: 'cartoon-chibi',    name: 'Chibi',    primaryPrompt: PROMPT_CARTOON_CHIBI,    sortOrder: 1 },
+      ],
+    },
+    {
+      slug: 'low-poly',
+      displayName: 'Low Poly',
+      name: '低多边形风格',
+      isOrderable: true,
+      accentColor: '#5BC0EB',
+      icon: 'Triangle',
+      sortOrder: 1,
+      presets: [
+        { slug: 'lowpoly-standard', name: 'Standard', primaryPrompt: PROMPT_LOWPOLY_STANDARD, sortOrder: 0 },
+        { slug: 'lowpoly-rough',    name: 'Rough',    primaryPrompt: PROMPT_LOWPOLY_ROUGH,    sortOrder: 1 },
+      ],
+    },
+    {
+      slug: 'sculpture',
+      displayName: 'Sculpture',
+      name: '雕塑风格',
+      isOrderable: true,
+      accentColor: '#C4A882',
+      icon: 'Box',
+      sortOrder: 2,
+      presets: [
+        { slug: 'sculpture-standard', name: 'Standard',  primaryPrompt: PROMPT_SCULPTURE_STANDARD, sortOrder: 0 },
+        { slug: 'sculpture-faceless', name: 'Faceless',  primaryPrompt: PROMPT_SCULPTURE_FACELESS, sortOrder: 1 },
+      ],
+    },
+    {
+      slug: 'realistic',
+      displayName: 'Realistic',
+      name: '写实风格',
+      isOrderable: false,
+      accentColor: '#6B7280',
+      icon: 'Aperture',
+      sortOrder: 3,
+      presets: [
+        { slug: 'realistic-standard', name: 'Standard', primaryPrompt: PROMPT_REALISTIC_STANDARD, sortOrder: 0 },
+      ],
+    },
+  ];
+
+  for (const cat of styleCategories) {
+    const { presets, ...catData } = cat;
+    const upsertedCat = await prisma.styleCategory.upsert({
+      where: { slug: cat.slug },
+      update: { displayName: catData.displayName, name: catData.name, isOrderable: catData.isOrderable, accentColor: catData.accentColor, icon: catData.icon, sortOrder: catData.sortOrder },
+      create: catData,
+    });
+
+    for (const preset of presets) {
+      await prisma.stylePreset.upsert({
+        where: { categoryId_slug: { categoryId: upsertedCat.id, slug: preset.slug } },
+        update: { name: preset.name, primaryPrompt: preset.primaryPrompt, sortOrder: preset.sortOrder },
+        create: { ...preset, categoryId: upsertedCat.id },
+      });
+    }
+    console.log(`  ✅ Category "${cat.displayName}" + ${presets.length} presets`);
+  }
+  console.log(`✅ Seeded style categories & presets`);
+
   console.log('\n🎉 Seed complete!');
 }
 

@@ -181,9 +181,14 @@ ai-adapters/
 
 ### Prompt 工程
 
-**提示词1 — 手办产品照（`PROMPT_PRIMARY`，英文）**：
+**提示词工程（Prompt Engineering）**
+
+**提示词1 — 手办产品照（`PROMPT_PRIMARY`，英文）**（回退默认值）：
 > A professional studio product shot of a 1/7 scale premium ACG figurine featuring the characters in the reference image. The style is a highly detailed, mature stylized anime aesthetic...
 - 输入：1 张图（抠图后优先，否则原图）
+- **[Phase 1]** 如果前端传入 `promptOverride`，则该默认值被覆盖。透传链路：
+  `StylePreset.primaryPrompt` → `FigurineGenerationGallery (stylePrompt prop)` → `startAsyncGeneration (promptOverride)` → Webhook body → `generatePrimaryRender(promptOverride)` → `callImageGenAPI`
+- **[Phase 2]** 当前仍为常量文件 `src/lib/constants/style-presets.ts`，Phase 2 迁移至 DB + Admin 后台
 
 **提示词2 — 效果展示图（`PROMPT_SHOWCASE`，中文）**：
 > 将手办图中的手办模型放置在一张家用餐桌上，手办底座为透明亚克力，无任何文字。手办旁边放着原图和一支铅笔...
@@ -237,9 +242,12 @@ model GeneratedAsset {
 ## 8. 已知限制与待办
 
 - Vercel Serverless maxDuration=120s，超长生图可能超时
-- 当前 Prompt 硬编码在 `image-to-3d.ts`，未来应抽取到配置或数据库
+- ~~当前 Prompt 硬编码在 `image-to-3d.ts`~~ **[已修复 Phase 1]** 主视图提示词现通过 `promptOverride` 全链路透传，常量文件位于 `src/lib/constants/style-presets.ts`
 - 背景移除（`@imgly/background-removal`）处于 Feature Flag 实验阶段
 - 低端移动设备的 WASM 抠图内存消耗需持续观察
 - 二、三视角的一致性依赖模型能力，偶有漂移
 - 即梦提示词为 Gemini 优化，可能需要针对即梦做 Prompt 适配
 - 即梦 API 延迟特征不同于 Gemini，需观察是否要调整 timeout
+- **[Phase 2 待办]** 后视图/侧视图提示词（PROMPT_BACK/PROMPT_LEFT）尚未按风格定制，仍为全局共享
+- **[Phase 2 待办]** StylePreset 未存储到 GeneratedAsset（Vault 中无法展示使用了哪个风格）
+- **[Phase 2 待办]** 风格配置迁移到 DB + Admin 后台 CRUD，包括示意图上传

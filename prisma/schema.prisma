@@ -213,14 +213,52 @@ model HeroSlide {
 // ==============
 
 model AiModel {
-  id          String   @id @default(cuid())
-  modelId     String   @unique              // API 模型标识符，如 "gemini-3.1-flash-image-preview"
-  name        String                        // 显示名称
-  description String?                       // 描述
-  provider    String                        // "gemini" | "jimeng"
-  isActive    Boolean  @default(true)       // 启用/禁用
-  sortOrder   Int      @default(0)          // 排序权重
-  config      Json?                         // 供应商特定配置 (如即梦的 endpointEnvKey)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String        @id @default(cuid())
+  modelId      String        @unique              // API 模型标识符，如 "gemini-3.1-flash-image-preview"
+  name         String                             // 显示名称
+  description  String?                            // 描述
+  provider     String                             // "gemini" | "jimeng"
+  isActive     Boolean       @default(true)       // 启用/禁用
+  sortOrder    Int           @default(0)          // 排序权重
+  config       Json?                              // 供应商特定配置 (如即梦的 endpointEnvKey)
+  stylePresets StylePreset[]                      // 反向关联：使用此模型的风格子类
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+// ==============
+// STYLE CONFIGURATION
+// ==============
+
+model StyleCategory {
+  id          String        @id @default(cuid())
+  slug        String        @unique              // 兼容 Phase 1 ID，如 "cartoon" / "low-poly"
+  displayName String                             // 英文显示名，如 "Cartoon"
+  name        String                             // 原始名称，如 "卡通风格"（备用）
+  isOrderable Boolean       @default(true)       // false 时前台禁止下单
+  accentColor String        @default("#6B7280")  // HEX 色，用于卡片高亮
+  icon        String        @default("Box")      // Lucide icon 名称
+  sortOrder   Int           @default(0)          // 排列顺序（升序）
+  isActive    Boolean       @default(true)       // 停用时前台不显示
+  presets     StylePreset[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model StylePreset {
+  id              String         @id @default(cuid())
+  slug            String                            // 大类内唯一，如 "cartoon-standard"
+  categoryId      String
+  name            String                            // 子类显示名，如 "Standard" / "Chibi"
+  primaryPrompt   String         @db.Text           // 主视图生成提示词
+  previewImageUrl String?        @db.Text           // Admin 上传的示意图 URL（Blob）
+  aiModelId       String?                           // 可选：绑定特定 AI 模型（null 用系统默认）
+  sortOrder       Int            @default(0)        // 大类内排序
+  isActive        Boolean        @default(true)     // 停用时前台不显示
+  category        StyleCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  aiModel         AiModel?       @relation(fields: [aiModelId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([categoryId, slug])
 }
