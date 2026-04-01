@@ -63,3 +63,44 @@
 4. **确认步骤**：生成结果图、原图缩略图
 
 组件详细规范见 `openspec/specs/image-lightbox/spec.md`。
+
+### 5.2 ImageLightbox 空 src 防护
+[ADDED] 本节更新于 2026-04-02。
+
+`ImageLightbox` 在关闭动画期间（200ms）组件仍挂载，若父组件传入空字符串 `src`，会触发浏览器重新下载页面的警告。
+- **规范**：`<img>` 元素必须使用 `{src && <img src={src} />}` 条件渲染，确保 `src` 为空时不渲染 `<img>` 节点。
+
+---
+
+## 6. 定制流程步骤架构 (Customize Flow Step Architecture)
+[ADDED] 本节新增于 2026-04-02，源自 customize-revamp 变更。
+
+### 6.1 步骤流程定义
+
+定制流程采用 4 步状态机：`upload → style → generate → confirm`
+
+| Step | 职责 |
+|---|---|
+| `upload` | 用户上传照片（支持可选抠图），提交进入风格选取 |
+| `style` | 选择风格大类（Cartoon / Low Poly / Sculpture / Realistic）及子变体；点击「Start Crafting My Figurine」进入生成 |
+| `generate` | FigurineGenerationGallery 挂载后**自动触发**生成，生成完成后点击进入确认 |
+| `confirm` | 展示生成结果预览、商品规格选项（合并原 select 步骤）、价格与加入购物车按钮 |
+
+### 6.2 抠图（BG Removal）默认关闭
+- `bgFilterEnabled` 初始值为 `false`，用户需手动开启 Remove Background 功能。
+- 抠图进行中（`bgProcessing === true`）时，「Continue」按钮处于 `disabled` 状态，文案改为「Processing photo...」，防止用户在处理期间进入下一步。
+
+### 6.3 生成自动触发规则
+- `FigurineGenerationGallery` 挂载时，若 `initialViews` 为 `null`（全新生成），立即调用 `startGenerationFlow()`。
+- 若 `initialViews` 不为空（从 Vault 进入），直接展示历史视图，不触发自动生成。
+- 生成失败（`status === 'ERROR'`）时展示「Retry」按钮，用户手动点击后重试。
+
+### 6.4 预览风格下单限制（isOrderable）
+- `isOrderable = false` 的风格（如 Realistic）允许正常进入生成并完成渲染。
+- 在 `style` 步骤中，「Start Crafting My Figurine」按钮**不禁用**，仅在按钮下方展示灰色小字提示。
+- 在 `confirm` 步骤中，「Add to Cart」按钮 `disabled`，展示「Ordering not yet available for this style」说明。
+
+### 6.5 Gallery 按钮语义
+- 生成进行中：右侧进入确认的按钮不可见或 `disabled`。
+- 生成完成：右侧按钮文案「View Results & Order」，图标 `ArrowRight`。
+- 「Initialize Canvas」和「Finalize Tri-View Model」按钮已移除；ERROR 状态改为显示「Retry」按钮。

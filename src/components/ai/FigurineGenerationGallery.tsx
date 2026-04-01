@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { startAsyncGeneration } from '@/app/actions/start-generation';
-import { Loader2, ArrowLeft, Download, Rotate3D, LayoutGrid } from 'lucide-react';
+import { Loader2, ArrowLeft, ArrowRight, Rotate3D, LayoutGrid } from 'lucide-react';
 import { ImageLightbox } from '@/components/ImageLightbox';
 
 interface FigurineGenerationGalleryProps {
@@ -31,6 +31,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
   const [currentAssetId, setCurrentAssetId] = useState<string | undefined>(undefined);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [quotaError, setQuotaError] = useState<'LIMIT_REACHED' | null>(null);
+  const autoStartCalledRef = useRef<boolean>(false);
 
   // 自动获取后台配置的默认模型
   useEffect(() => {
@@ -64,6 +65,15 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
     return () => clearInterval(interval);
   }, [status]);
 
+  // Auto-start on mount if no initial views
+  useEffect(() => {
+    if (!initialViews && !autoStartCalledRef.current) {
+      autoStartCalledRef.current = true;
+      startGenerationFlow();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Result States
   const [primaryImage, setPrimaryImage] = useState<string | null>(initialViews?.primary || null);
   const [backImage, setBackImage] = useState<string | null>(initialViews?.back || null);
@@ -94,6 +104,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
              showcaseCleanB64 = originalImageForShowcase.includes('base64,') ? originalImageForShowcase.split('base64,')[1] : originalImageForShowcase;
            }
          }
+         console.log(`[Gallery] stylePrompt (promptOverride):`, stylePrompt ? stylePrompt.slice(0, 80) + '...' : '(none — will use PROMPT_PRIMARY default)');
          const initResult = await startAsyncGeneration({
             originalImageB64: hasBgRemoved ? showcaseCleanB64 : (cleanB64 || ""),
             processedImageB64: hasBgRemoved ? (cleanB64 ? `data:image/jpeg;base64,${cleanB64}` : undefined) : undefined,
@@ -196,26 +207,23 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
                  )}
              </div>
              
-             <div>
-                 <button 
-                     onClick={() => { setQuotaError(null); startGenerationFlow(); }}
-                     disabled={!!quotaError || status === 'GENERATING_PRIMARY' || status === 'GENERATING_SECONDARY' || status === 'COMPLETE'}
-                     className={`relative font-medium px-8 py-2.5 rounded-full transition-all shadow-md overflow-hidden ${quotaError ? 'bg-black/5 dark:bg-white/5 text-[var(--text-tertiary)] cursor-not-allowed border border-black/5 dark:border-white/5 opacity-60' : status === 'IDLE' || status === 'ERROR' ? 'bg-black dark:bg-white text-white dark:text-black hover:-translate-y-0.5 hover:shadow-lg cursor-pointer' : status === 'COMPLETE' ? 'bg-[#00D084]/10 border border-[#00D084]/20 cursor-default shadow-none' : 'bg-black/5 dark:bg-white/5 text-[var(--text-tertiary)] cursor-not-allowed border border-black/5 dark:border-white/5'}`}
-                     title={quotaError === 'LIMIT_REACHED' ? 'Generation limit reached' : undefined}
-                 >
-                     {quotaError === 'LIMIT_REACHED' ? (
-                         <span className="relative z-10 flex items-center gap-2 text-sm">Generation Limit Reached</span>
-                     ) : status === 'IDLE' || status === 'ERROR' ? (
-                         <span className="relative z-10 flex items-center gap-2">Initialize Canvas</span>
-                     ) : (
-                         <span className="relative z-10 flex items-center gap-2">
-                             {status === 'COMPLETE' ? "Generation Complete" : 'Virtualizing...'}
-                         </span>
-                     )}
-                     {(status === 'GENERATING_PRIMARY' || status === 'GENERATING_SECONDARY') && (
-                         <div className="absolute inset-0 bg-purple-100/10 dark:bg-white/5 animate-pulse" />
-                     )}
-                 </button>
+             <div className="flex items-center gap-3">
+                 {quotaError === 'LIMIT_REACHED' && (
+                     <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Generation Limit Reached</span>
+                 )}
+                 {status === 'ERROR' && (
+                     <button
+                         onClick={() => { setQuotaError(null); startGenerationFlow(); }}
+                         className="font-medium px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black hover:-translate-y-0.5 hover:shadow-lg transition-all flex items-center gap-2"
+                     >
+                         <Loader2 className="w-4 h-4" /> Retry
+                     </button>
+                 )}
+                 {status === 'COMPLETE' && (
+                     <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
+                         <span>✓</span> Generation Complete
+                     </div>
+                 )}
              </div>
         </div>
 
@@ -281,8 +289,8 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
                             <div className="absolute inset-0 bg-[var(--brand-primary)]/10 blur-xl rounded-full pb-4"></div>
                             <LayoutGrid className="relative w-full h-full text-[var(--text-secondary)] drop-shadow-sm" />
                         </div>
-                        <h3 className="text-xl font-medium text-[var(--text-primary)] tracking-tight">Awaiting Render Command</h3>
-                        <p className="text-sm text-[var(--text-secondary)] max-w-sm mx-auto leading-relaxed">Press <span className="font-semibold">Initialize Canvas</span> to begin the 3D construction pipeline for your figurine.</p>
+                        <h3 className="text-xl font-medium text-[var(--text-primary)] tracking-tight">Ready to craft your figurine</h3>
+                         <p className="text-sm text-[var(--text-secondary)] max-w-sm mx-auto leading-relaxed">Your photo is being analyzed. Crafting will begin shortly.</p>
                     </div>
                 )}
 
@@ -313,11 +321,11 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
                         {/* Kinetic Typography Status */}
                         <div className="text-center space-y-3 max-w-sm relative z-30">
                            <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--text-primary)] animate-pulse">
-                              Virtualizing 3D Scene...
-                           </h3>
-                           <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                              Calculating depth maps, extruding base geometry, and baking albedo textures to reconstruct a 1:1 commercial scale figurine.
-                           </p>
+                               Bringing your photo to life...
+                            </h3>
+                            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                               Capturing every detail to craft your handcrafted figurine.
+                            </p>
 
 
                            
@@ -391,7 +399,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
                 disabled={status !== 'COMPLETE'}
                 className="bg-black dark:bg-white text-white dark:text-black hover:-translate-y-0.5 hover:shadow-lg disabled:hover:translate-y-0 disabled:opacity-30 disabled:cursor-not-allowed font-semibold px-6 py-2.5 rounded-full transition-all flex items-center gap-2"
               >
-                 <Download className="w-4 h-4" /> Finalize Tri-View Model
+                 <ArrowRight className="w-4 h-4" /> View Results &amp; Order
               </button>
         </div>
 

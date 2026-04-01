@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { removeImageBackground, isBgRemovalEnabled } from '@/lib/remove-background';
 import { STYLE_CATEGORIES, StylePreset, StyleCategory, getDefaultPreset } from '@/lib/constants/style-presets';
 
-type Step = 'upload' | 'generate' | 'select' | 'confirm';
+type Step = 'upload' | 'style' | 'generate' | 'confirm';
 
 export default function CustomizePage() {
   const [step, setStep] = useState<Step>('upload');
@@ -78,7 +78,7 @@ export default function CustomizePage() {
   const [bgOriginal, setBgOriginal] = useState<string | null>(null);     // 原图（抠图前）
   const [bgProcessed, setBgProcessed] = useState<string | null>(null);   // 抠图结果缓存
   const [bgProcessing, setBgProcessing] = useState(false);               // WASM 是否在执行
-  const [bgFilterEnabled, setBgFilterEnabled] = useState(true);          // Toggle 开关
+  const [bgFilterEnabled, setBgFilterEnabled] = useState(false);          // Toggle 开关
   const bgCancelledRef = useRef(false);                                  // 抠图取消标记
   const bgSourceRef = useRef<string | null>(null);                       // PNG 源图（用于重新抠图）
 
@@ -121,7 +121,7 @@ export default function CustomizePage() {
   // 回滚防护 (Auto-Recovery): 修复当在 /customize 页面内再次点击顶部 /customize 链接出现的白屏。
   // 因为 zustand state 被清空但不触发挂载重载，我们需要一个小探针把本地路由重置。
   useEffect(() => {
-     if (!uploadedImage && !editingVaultAssetId && step !== 'upload') {
+     if (!uploadedImage && !editingVaultAssetId && step !== 'upload' && step !== 'style') {
         setStep('upload');
         setIsAddedToCart(false);
      }
@@ -449,27 +449,27 @@ export default function CustomizePage() {
       <div className={`w-full mx-auto px-4 sm:px-6 xl:px-8 relative z-10 transition-all duration-700 ${step === 'generate' && galleryStatus === 'COMPLETE' ? 'max-w-[1600px]' : 'max-w-4xl'}`}>
         
         {/* Professional Header Row with Steps & Security Badge */}
+        {step !== 'upload' && (
         <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-black/10 dark:border-white/10 pb-6 transition-all duration-500">
            {/* Left: Dynamic Step Title & Vault Status */}
            <div className="flex flex-col gap-2">
               <div className="flex items-center gap-4">
                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight transition-all" style={{ color: config.colors.text }}>
-                    {step === 'upload' && (t('uploadTitle') || 'Initialize Core')}
-                    {step === 'generate' && 'Virtualize Model'}
-                    {step === 'select' && (t('chooseOptions') || 'Configure Specs')}
-                    {step === 'confirm' && (t('confirmTitle') || 'Review Assets')}
+                     {step === 'style' && 'Choose Your Style'}
+                     {step === 'generate' && 'Crafting Your Figurine'}
+                     {step === 'confirm' && 'Review & Order'}
                  </h1>
                  
                  {/* Security Badge inline with title */}
                  {step === 'generate' && (galleryStatus === 'GENERATING_PRIMARY' || galleryStatus === 'GENERATING_SECONDARY') && !editingVaultAssetId && (
                      <div className="animate-in fade-in slide-in-from-left-2 zoom-in duration-300">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#00f0ff]/10 border border-[#00f0ff]/20 text-[#00f0ff] text-[10px] sm:text-xs font-bold uppercase tracking-widest shadow-sm">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-blue-50 border border-blue-200 text-blue-600 text-[10px] sm:text-xs font-bold uppercase tracking-widest shadow-sm">
                            <Loader2 className="w-3 h-3 animate-spin inline-block" />
-                           Generating...
+                           Crafting...
                         </div>
                      </div>
                  )}
-                 {((step === 'generate' && (galleryStatus === 'COMPLETE' || editingVaultAssetId)) || step === 'select' || step === 'confirm') && (
+                  {((step === 'generate' && (galleryStatus === 'COMPLETE' || editingVaultAssetId)) || step === 'confirm') && (
                      <div className="animate-in fade-in slide-in-from-left-2 zoom-in duration-300">
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#00D084]/10 border border-[#00D084]/20 text-[#00D084] text-[10px] sm:text-xs font-bold uppercase tracking-widest shadow-sm">
                            <span className="relative flex h-2 w-2 align-middle">
@@ -481,18 +481,17 @@ export default function CustomizePage() {
                  )}
               </div>
               <p className="text-sm font-medium opacity-70 transition-all max-w-xl" style={{ color: config.colors.text }}>
-                 {step === 'upload' && (t('uploadDesc') || 'Upload your source subject to begin the 3D translation process.')}
-                 {step === 'generate' && 'Vision Language Model is actively sculpting your parameters into a 3D mesh.'}
-                 {step === 'select' && 'Select the physical crafting options, dimensions, and platform for your 3D model.'}
-                 {step === 'confirm' && 'Final review of visual and physical parameters before dispatching to manufacturing.'}
+                 {step === 'style' && 'Select the artistic style for your figurine, then start crafting.'}
+                 {step === 'generate' && 'Capturing every detail of your photo. This takes about a minute.'}
+                 {step === 'confirm' && 'Review your figurine and choose your preferred size to place your order.'}
               </p>
            </div>
 
            {/* Right: Micro Steps Indicator */}
            <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 p-1.5 rounded-full border border-black/10 dark:border-white/10 shrink-0">
-              {['upload', 'generate', 'select', 'confirm'].map((s, i) => {
+              {['upload', 'style', 'generate', 'confirm'].map((s, i) => {
                  const isActive = step === s;
-                 const isPast = ['upload', 'generate', 'select', 'confirm'].indexOf(step) > i;
+                 const isPast = ['upload', 'style', 'generate', 'confirm'].indexOf(step) > i;
                  
                  return (
                      <div key={s} className="flex items-center" title={`Step ${i+1}`}>
@@ -511,14 +510,168 @@ export default function CustomizePage() {
               })}
            </div>
         </div>
+        )}
+
+        {/* Step 2: 风格选择 + 正式启动 */}
+        {step === 'style' && uploadedImage && (
+          <div className={`p-6 sm:p-8 ${styles.card} relative`} style={{ backgroundColor: config.colors.background }}>
+            {/* 返回修改照片 */}
+            <div className="mb-6 flex items-start">
+              <button
+                onClick={() => setStep('upload')}
+                className="text-sm font-medium opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1.5 bg-black/5 dark:bg-white/5 py-1.5 px-3 rounded-md"
+                style={{ color: config.colors.text }}
+              >
+                ← Change Photo
+              </button>
+            </div>
+
+            <div className="grid gap-8 md:grid-cols-[148px_1fr] items-start">
+              {/* 左：已上传照片预览 */}
+              <div className="hidden md:flex flex-col items-center gap-2">
+                <div className="w-36 h-48 rounded-2xl overflow-hidden border-2 shadow-sm" style={{ borderColor: config.colors.border }}>
+                  <ClickableImage src={uploadedImage} alt="Your photo" className="w-full h-full object-cover" />
+                </div>
+                <p className="text-xs font-medium opacity-50" style={{ color: config.colors.textMuted }}>Your photo</p>
+              </div>
+
+              {/* 右：风格选择 */}
+              <div className="space-y-6">
+                {/* 大类 */}
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest mb-3 opacity-40" style={{ color: config.colors.text }}>
+                    Select Style
+                  </p>
+                  {isLoadingStyles ? (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {[0,1,2,3].map(i => (
+                        <div key={i} className="h-24 rounded-xl animate-pulse" style={{ backgroundColor: config.colors.backgroundAlt }} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {styleCategories.map((cat) => {
+                        const iconMap: Record<string, React.ReactNode> = {
+                          Smile: <Smile className="w-6 h-6" />,
+                          Triangle: <Triangle className="w-6 h-6" />,
+                          Box: <Box className="w-6 h-6" />,
+                          Aperture: <Aperture className="w-6 h-6" />,
+                        };
+                        const isCatSelected = selectedCategoryId === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCategoryId(cat.id);
+                              setSelectedPresetId(cat.presets[0].id);
+                            }}
+                            className={`relative flex flex-col items-center justify-center gap-2.5 py-5 px-2 rounded-2xl border-2 transition-all duration-200 cursor-pointer active:scale-95 ${
+                              isCatSelected
+                                ? 'shadow-sm'
+                                : 'border-transparent hover:border-black/10 dark:hover:border-white/10'
+                            }`}
+                            style={isCatSelected
+                              ? { borderColor: config.colors.primary, backgroundColor: config.colors.backgroundAlt }
+                              : { backgroundColor: config.colors.backgroundAlt }
+                            }
+                          >
+                            {!cat.isOrderable && (
+                              <span className="absolute top-2 right-2 text-[8px] font-semibold uppercase tracking-wider bg-black/8 text-black/40 dark:bg-white/10 dark:text-white/40 px-1.5 py-0.5 rounded-full leading-none">
+                                Preview
+                              </span>
+                            )}
+                            <div
+                              className="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200"
+                              style={{
+                                backgroundColor: isCatSelected ? config.colors.primary + '18' : 'transparent',
+                                color: isCatSelected ? config.colors.primary : config.colors.textMuted,
+                              }}
+                            >
+                              {iconMap[cat.icon] ?? <span className="text-base font-bold">{cat.displayName.charAt(0)}</span>}
+                            </div>
+                            <span
+                              className="text-xs font-semibold transition-colors"
+                              style={{ color: isCatSelected ? config.colors.text : config.colors.textMuted }}
+                            >
+                              {cat.displayName}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 小类 variant pills */}
+                {(() => {
+                  const activeCat = styleCategories.find(c => c.id === selectedCategoryId);
+                  if (!activeCat || activeCat.presets.length <= 1) return null;
+                  return (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest mb-2.5 opacity-40" style={{ color: config.colors.text }}>
+                        Style Variant
+                      </p>
+                      <div className="flex gap-2 flex-wrap">
+                        {activeCat.presets.map((preset) => {
+                          const isPresetSelected = selectedPresetId === preset.id;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => setSelectedPresetId(preset.id)}
+                              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border transition-all duration-150 cursor-pointer active:scale-95 ${
+                                isPresetSelected
+                                  ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white shadow-sm'
+                                  : 'border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30 hover:bg-black/5 dark:hover:bg-white/5'
+                              }`}
+                              style={isPresetSelected ? {} : { color: config.colors.textMuted }}
+                            >
+                              {isPresetSelected && <Check className="w-3 h-3" />}
+                              {preset.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Start Crafting 按钮 — 正式启动 */}
+                <div className="pt-2">
+                  <button
+                    onClick={() => setStep('generate')}
+                    className={`w-full flex items-center justify-center gap-3 py-4 text-base font-bold rounded-2xl transition-all ${styles.button} hover:scale-[1.01] active:scale-[0.99]`}
+                  >
+                    <Sparkles className="w-5 h-5" />
+                    Start Crafting My Figurine
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                  {!selectedCategoryIsOrderable && (
+                    <p className="mt-2 text-xs text-center opacity-50" style={{ color: config.colors.text }}>
+                      Preview style — generation is available but ordering is not yet open.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        )}
 
         {/* Step 1: 上传图片 */}
+
         {step === 'upload' && (
           <div id="upload-card" className={`p-8 ${styles.card} relative`} style={{ backgroundColor: config.colors.background }}>
-            {/* 恢复至极简文件上传，并设置严格的高度控制 */}
+            {/* Upload 步骤标题 */}
+            <div className="mb-6">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1" style={{ color: config.colors.text }}>Upload Your Photo</h1>
+              <p className="text-sm opacity-60" style={{ color: config.colors.textMuted }}>Your figurine will be crafted from this photo</p>
+            </div>
             {!uploadedImage ? (
+                <>
                 <div
-                  className="mt-6 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 transition-colors hover:bg-gray-50/50 cursor-pointer"
+                  className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 transition-colors hover:bg-gray-50/50 cursor-pointer"
                   style={{ borderColor: config.colors.border }}
                   onClick={() => fileInputRef.current?.click()}
                 >
@@ -537,6 +690,21 @@ export default function CustomizePage() {
                     className="hidden"
                   />
                 </div>
+                {/* 拍摄提示 */}
+                <div className="mt-5 grid grid-cols-2 gap-2.5">
+                  {[
+                    'Full body or clear subject',
+                    'Simple or plain background',
+                    'Good lighting — no harsh shadows',
+                    'Face clearly visible',
+                  ].map((tip, i) => (
+                    <div key={i} className="flex items-start gap-2 p-3 rounded-xl" style={{ backgroundColor: config.colors.backgroundAlt }}>
+                      <span className="mt-0.5 text-sm leading-none shrink-0" style={{ color: config.colors.primary }}>✦</span>
+                      <span className="text-xs leading-relaxed" style={{ color: config.colors.textMuted }}>{tip}</span>
+                    </div>
+                  ))}
+                </div>
+                </>
             ) : (
                 <div className="mt-8 flex flex-col gap-6 animate-in fade-in zoom-in duration-300">
                     <div className="w-full max-h-80 overflow-hidden rounded-xl border flex items-center justify-center bg-gray-50/50 relative" style={{ borderColor: config.colors.border }}>
@@ -552,15 +720,12 @@ export default function CustomizePage() {
                           </div>
                         )}
                     </div>
-
-
-
-
-                    {/* ── BG Segmented Control ── */}
+{/* ── BG Segmented Control ── */}
                     {isBgRemovalEnabled() && bgOriginal && (() => {
                       // 公共样式：选中/未选中
                       const activeClass = 'bg-white dark:bg-white/10 shadow-sm';
                       const inactiveClass = 'hover:bg-black/5 dark:hover:bg-white/5';
+
 
                       return (
                         <div
@@ -638,139 +803,57 @@ export default function CustomizePage() {
                       );
                     })()}
 
-                     {/* ===== 风格选取面板 ===== */}
-                     <div className="rounded-2xl border p-4 space-y-4" style={{ borderColor: config.colors.border }}>
-                       {/* 标题 */}
-                       <p className="text-[11px] font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: config.colors.primary }}>
-                         <span>✦</span> Choose Your Style
-                       </p>
+                       <div className="flex flex-col sm:flex-row gap-4 w-full">
 
-                       {/* 大类卡片 2x2 布局 — 加载中显示 skeleton */}
-                       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                         {isLoadingStyles
-                           ? [0,1,2,3].map((i) => (
-                               <div key={i} className="h-[108px] rounded-xl animate-pulse"
-                                 style={{ backgroundColor: config.colors.backgroundAlt ?? '#f0f0f0' }} />
-                             ))
-                           : styleCategories.map((cat) => {
-                           const iconMap: Record<string, React.ReactNode> = {
-                             Smile: <Smile className="w-6 h-6" />,
-                             Triangle: <Triangle className="w-6 h-6" />,
-                             Box: <Box className="w-6 h-6" />,
-                             Aperture: <Aperture className="w-6 h-6" />,
-                           };
-                           const isCatSelected = selectedCategoryId === cat.id;
-                           return (
-                             <button
-                               key={cat.id}
-                               type="button"
-                               onClick={() => {
-                                 setSelectedCategoryId(cat.id);
-                                 setSelectedPresetId(cat.presets[0].id);
-                               }}
-                               className={`relative flex flex-col items-center justify-center gap-2.5 py-4 px-2 rounded-xl border-2 transition-all duration-200 cursor-pointer
-                                 ${isCatSelected
-                                   ? 'scale-[1.03] shadow-md'
-                                   : 'border-transparent hover:scale-[1.01]'
-                                 }`}
-                               style={isCatSelected
-                                 ? { borderColor: cat.accentColor, backgroundColor: cat.accentColor + '18' }
-                                 : { backgroundColor: config.colors.backgroundAlt ?? '#f8f8f8' }
-                               }
-                             >
-                               {/* Preview Only 徽章 */}
-                               {!cat.isOrderable && (
-                                 <span className="absolute top-1.5 right-1.5 text-[8px] font-bold uppercase tracking-wider bg-gray-200/80 dark:bg-gray-700/80 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-full leading-none">
-                                   Preview
-                                 </span>
-                               )}
-                               {/* 图标圆圈 */}
-                               <div
-                                 className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-sm transition-all duration-200"
-                                 style={{ backgroundColor: isCatSelected ? cat.accentColor : cat.accentColor + 'aa' }}
-                               >
-                                 {iconMap[cat.icon] ?? <span className="text-lg font-bold">{cat.displayName.charAt(0)}</span>}
-                               </div>
-                               {/* 名称 + 子类圆点指示 */}
-                               <div className="flex flex-col items-center gap-1">
-                                 <span
-                                   className="text-xs font-bold tracking-wide transition-colors"
-                                   style={{ color: isCatSelected ? cat.accentColor : config.colors.textMuted }}
-                                 >
-                                   {cat.displayName}
-                                 </span>
-                               </div>
-                             </button>
-                           );
-                         })}
-                       </div>
+                         <button
 
-                        {/* 子类选择（含引导文字） */}
-                        {(() => {
-                          const activeCat = styleCategories.find(c => c.id === selectedCategoryId);
-                          if (!activeCat || activeCat.presets.length <= 1) return null;
-                          return (
-                            <div className="space-y-2">
-                              <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: activeCat.accentColor }}>
-                                <span className="opacity-60">└</span> Pick a variant
-                              </p>
-                              <div className="flex gap-2 flex-wrap">
-                                {activeCat.presets.map((preset) => {
-                                  const isPresetSelected = selectedPresetId === preset.id;
-                                  return (
-                                    <button
-                                      key={preset.id}
-                                      type="button"
-                                      onClick={() => setSelectedPresetId(preset.id)}
-                                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all duration-150
-                                        ${isPresetSelected
-                                          ? 'text-white border-transparent shadow-sm scale-[1.02]'
-                                          : 'hover:scale-[1.01]'
-                                        }`}
-                                      style={isPresetSelected
-                                        ? { backgroundColor: activeCat.accentColor, borderColor: activeCat.accentColor }
-                                        : { borderColor: activeCat.accentColor + '50', color: activeCat.accentColor, backgroundColor: activeCat.accentColor + '10' }
-                                      }
-                                    >
-                                      {isPresetSelected && <Check className="w-3 h-3" />}
-                                      {preset.name}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })()}
+                           onClick={() => {
+
+                             setUploadedImage(null);
+
+                             setBgOriginal(null);
+
+                             setBgProcessed(null);
+
+                             setBgProcessing(false);
+
+                             bgSourceRef.current = null;
+
+                           }}
+
+                           className="flex-1 rounded-full border py-3.5 text-sm font-medium hover:bg-black/5 transition-all"
+
+                           style={{ borderColor: config.colors.border, color: config.colors.text }}
+
+                         >
+
+                           Change Photo
+
+                         </button>
+
+                         <button
+
+                           onClick={() => setStep('style')}
+
+                           disabled={bgProcessing}
+
+                           className={`flex-[2] flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-all ${bgProcessing ? 'rounded-full opacity-50 cursor-not-allowed bg-black/20 text-white' : styles.button}`}
+
+                         >
+
+                           {bgProcessing
+
+                             ? <><Loader2 className="h-4 w-4 animate-spin" /> Processing photo...</>
+
+                             : <>Continue <ArrowRight className="h-4 w-4" /></>
+
+                           }
+
+                         </button>
+
                      </div>
-                     {/* ===== 风格选取面板 END ===== */}
+                 </div>
 
-                      <div className="flex flex-col sm:flex-row gap-4 w-full">
-                        <button
-                          onClick={() => {
-                            setUploadedImage(null);
-                            // 重置所有 bg 状态
-                            setBgOriginal(null);
-                            setBgProcessed(null);
-                            setBgProcessing(false);
-                            bgSourceRef.current = null;
-                          }}
-                          className="flex-1 rounded-full border py-3.5 text-sm font-medium hover:bg-black/5 transition-all"
-                          style={{ borderColor: config.colors.border, color: config.colors.text }}
-                        >
-                          重新选择
-                        </button>
-                        <button
-                          onClick={() => {
-                            // 边界处理：抠图中 → 用原图生成，不等抠图完成
-                            const imageForGeneration = (bgProcessing && bgOriginal) ? bgOriginal : uploadedImage;
-                            if (imageForGeneration) handleGenerate(imageForGeneration);
-                          }}
-                          className={`flex-[2] flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-all ${styles.button}`}
-                        >
-                          <Sparkles className="h-4 w-4" /> 生成 3D 模型
-                        </button>
-                    </div>
-                </div>
             )}
           </div>
         )}
@@ -788,7 +871,7 @@ export default function CustomizePage() {
                       router.push('/profile');
                       setTimeout(() => resetGenerationFlow(), 100);
                    } else {
-                      setStep('upload');
+                      setStep('style');
                       setGeneratedImage(null);
                       setGeneratedViews(null);
                       setGenerationStatus('idle');
@@ -799,7 +882,7 @@ export default function CustomizePage() {
                    setGeneratedImage(urls.primary); 
                    setGeneratedViews(urls);                   
                    setGenerationStatus('success');
-                   setStep('select');
+                   setStep('confirm');
                    setGalleryStatus('COMPLETE');
                    
                    // Firewall: Prevent duplicate creation if we are modifying an existing vault asset
@@ -831,104 +914,16 @@ export default function CustomizePage() {
           </div>
         )}
 
-        {/* Step 3: 选择选项 */}
-        {step === 'select' && (
-          <div id="upload-card" className={`p-8 ${styles.card} relative`} style={{ backgroundColor: config.colors.background }}>
-            {/* 图片预览 */}
-            <div className="mb-6 flex justify-center">
-              <div className={`relative rounded-xl border p-4`} style={{ borderColor: config.colors.border }}>
-                {(generatedImage || uploadedImage) && (
-                   <ClickableImage src={generatedImage || uploadedImage!} alt="Generated" className="max-h-64 rounded-lg object-contain" />
-                )}
-                <div className="absolute bottom-6 left-6 rounded-full bg-black/70 px-3 py-1 text-xs text-white">
-                  AI Generated Preview
-                </div>
-              </div>
-            </div>
-
-            {/* 选项选择 */}
-            {isLoadingProducts ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin" style={{ color: config.colors.textMuted }} />
-              </div>
-            ) : product ? (
-              <div className="space-y-6">
-                {product.options.map((option) => (
-                  <div key={option.name}>
-                    <h3 className="mb-3 text-sm font-medium" style={{ color: config.colors.text }}>{option.name}</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {option.values.map((value) => {
-                        const isSelected = selectedOptions[option.name] === value;
-                        return (
-                          <button
-                            key={value}
-                            onClick={() => handleOptionChange(option.name, value)}
-                            className={`rounded-lg border px-4 py-2 text-sm transition-colors ${
-                              isSelected ? 'border-black bg-black text-white' : 'border-gray-300 hover:border-gray-400'
-                            }`}
-                            style={isSelected ? {} : { borderColor: config.colors.border, color: config.colors.text }}
-                          >
-                            {value}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-
-                {/* 价格显示 */}
-                <div className="mt-6 rounded-xl p-4" style={{ backgroundColor: config.colors.backgroundAlt }}>
-                  <div className="flex items-center justify-between">
-                    <span style={{ color: config.colors.textMuted }}>{t('selectProduct')}</span>
-                    <span className="font-medium" style={{ color: config.colors.text }}>{selectedVariant?.title}</span>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span style={{ color: config.colors.textMuted }}>Price:</span>
-                    <span className="text-3xl font-bold" style={{ color: config.colors.primary }}>
-                      ${selectedVariant?.price.toFixed(2) || '0.00'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <p className="text-center" style={{ color: config.colors.textMuted }}>No product available</p>
-            )}
-
-            <div className="mt-6 flex gap-4">
-              <button
-                onClick={() => setStep('generate')}
-                className="flex-1 rounded-full border py-3 font-medium hover:bg-gray-50 transition-colors"
-                style={{ borderColor: config.colors.border, color: config.colors.text }}
-              >
-                ← {t('backBtn')} (View renders)
-              </button>
-              <button
-                onClick={() => setStep('confirm')}
-                disabled={!selectedVariant || !selectedCategoryIsOrderable}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 font-medium ${styles.button} disabled:opacity-40 disabled:cursor-not-allowed`}
-                title={!selectedCategoryIsOrderable ? 'Realistic style is currently not available for order.' : undefined}
-              >
-                {t('continueBtn')} <ArrowRight className="h-5 w-5" />
-              </button>
-            </div>
-            {!selectedCategoryIsOrderable && (
-              <p className="mt-3 text-xs text-center font-medium text-amber-600 dark:text-amber-400">
-                ⚠️ Realistic style is currently for preview only and cannot be ordered.
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Step 4: 确认 */}
+        {/* Step 3: 确认 & 选择规格 */}
         {step === 'confirm' && (
           <div id="upload-card" className={`p-8 ${styles.card} relative`} style={{ backgroundColor: config.colors.background }}>
             <div className="mb-6 flex items-start">
               <button 
-                 onClick={() => setStep('select')} 
+                 onClick={() => setStep('generate')} 
                  className="text-sm font-medium opacity-70 hover:opacity-100 transition-opacity flex items-center gap-1 bg-black/5 dark:bg-white/5 py-1.5 px-3 rounded-md"
                  style={{ color: config.colors.text }}
               >
-                 ← 返回修改配置
+                 ← Back to figurine
               </button>
             </div>
 
@@ -949,17 +944,42 @@ export default function CustomizePage() {
                 )}
               </div>
 
-              {/* 详情 */}
+               {/* 规格选择 + 详情 */}
               <div className="space-y-4">
-                <div className={`rounded-xl border p-4`} style={{ borderColor: config.colors.border }}>
-                  <h3 className="mb-2 font-semibold" style={{ color: config.colors.text }}>{t('selectedOptions')}</h3>
-                  {selectedVariant?.selectedOptions.map((opt) => (
-                    <div key={opt.name} className="flex justify-between text-sm">
-                      <span style={{ color: config.colors.textMuted }}>{opt.name}:</span>
-                      <span className="font-medium" style={{ color: config.colors.text }}>{opt.value}</span>
-                    </div>
-                  ))}
-                </div>
+                {/* 商品规格选项 */}
+                {isLoadingProducts ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin" style={{ color: config.colors.textMuted }} />
+                  </div>
+                ) : product ? (
+                  <div className={`rounded-xl border p-5 space-y-5`} style={{ borderColor: config.colors.border }}>
+                    {product.options.map((option) => (
+                      <div key={option.name}>
+                        <h3 className="mb-3 text-sm font-semibold tracking-wide uppercase opacity-60" style={{ color: config.colors.text }}>{option.name}</h3>
+                        <div className="flex flex-wrap gap-2.5">
+                          {option.values.map((value) => {
+                            const isSelected = selectedOptions[option.name] === value;
+                            return (
+                              <button
+                                key={value}
+                                onClick={() => handleOptionChange(option.name, value)}
+                                className={`cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium transition-all active:scale-95 ${
+                                  isSelected
+                                    ? 'border-transparent bg-black text-white shadow-md dark:bg-white dark:text-black'
+                                    : 'hover:border-gray-400 hover:bg-black/5 dark:hover:bg-white/10'
+                                }`}
+                                style={isSelected ? {} : { borderColor: config.colors.border, color: config.colors.text }}
+                              >
+                                {value}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
 
                 <div className="rounded-xl border-2 p-4" style={{ borderColor: config.colors.primary }}>
                   <div className="flex items-center justify-between">
@@ -1010,15 +1030,16 @@ export default function CustomizePage() {
                       {t('addToCart')}
                     </button>
                 ) : (
-                    <div className="mt-4 space-y-2">
+                    <div className="mt-4 space-y-3">
                       <button
                         disabled
-                        className="flex w-full items-center justify-center gap-2 py-4 text-lg font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60"
+                        className="flex w-full items-center justify-center gap-2 py-4 text-lg font-medium rounded-full cursor-not-allowed opacity-40"
+                        style={{ backgroundColor: config.colors.backgroundAlt, color: config.colors.textMuted }}
                       >
-                        {t('addToCart')} — Not Available
+                        Ordering not yet available for this style
                       </button>
-                      <p className="text-xs text-center text-amber-600 dark:text-amber-400 font-medium">
-                        ⚠️ Realistic style is for preview only. Switch to Cartoon, Low-Poly or Sculpture to order.
+                      <p className="text-xs text-center font-medium" style={{ color: config.colors.textMuted }}>
+                        This style is in preview. Switch to Cartoon, Low Poly or Sculpture to place an order.
                       </p>
                     </div>
                 )}

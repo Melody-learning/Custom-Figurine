@@ -78,22 +78,24 @@ export function ImageLightbox({ src, alt, isOpen, onClose }: ImageLightboxProps)
         <X className="w-5 h-5" />
       </button>
 
-      {/* 图片 */}
-      <img
-        src={src}
-        alt={alt || 'Full size preview'}
-        onClick={(e) => e.stopPropagation()}
-        className="select-none"
-        style={{
-          maxWidth: '90vw',
-          maxHeight: '85vh',
-          objectFit: 'contain',
-          borderRadius: '8px',
-          transform: isVisible ? 'scale(1)' : 'scale(0.92)',
-          opacity: isVisible ? 1 : 0,
-          transition: 'transform 200ms ease-out, opacity 200ms ease-out',
-        }}
-      />
+      {/* 图片 — 仅在 src 有效时渲染，防止退出动画期间 src="" 触发 Next.js dev error */}
+      {src && (
+        <img
+          src={src}
+          alt={alt || 'Full size preview'}
+          onClick={(e) => e.stopPropagation()}
+          className="select-none"
+          style={{
+            maxWidth: '90vw',
+            maxHeight: '85vh',
+            objectFit: 'contain',
+            borderRadius: '8px',
+            transform: isVisible ? 'scale(1)' : 'scale(0.92)',
+            opacity: isVisible ? 1 : 0,
+            transition: 'transform 200ms ease-out, opacity 200ms ease-out',
+          }}
+        />
+      )}
 
       {/* 可选的 Alt 文字描述 */}
       {alt && (

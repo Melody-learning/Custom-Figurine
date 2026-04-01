@@ -17,6 +17,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         // For checkout uploads (guest or user), we allow it.
         return {
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+          addRandomSuffix: true,  // 防止同名文件冲突（尤其在本地反复测试时）
           tokenPayload: JSON.stringify({
             // optional payload
           }),
