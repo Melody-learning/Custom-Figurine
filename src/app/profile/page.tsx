@@ -90,11 +90,8 @@ export default async function ProfilePage() {
           <LogoutButton />
         </div>
 
-        {/* Coupon Asset Wall */}
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        {(session.user as any).hasWelcomeCoupon && (
-          <DynamicCouponCard />
-        )}
+        {/* Coupons & Redeem */}
+        <DynamicCouponCard />
 
         {/* Dashboards Stack */}
         <div className="flex flex-col gap-8">

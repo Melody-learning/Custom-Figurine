@@ -27,9 +27,9 @@
 ## 3. 域名解析章程 (Domain DNS Integration)
 为了最大化利用 Vercel CDN 的全球加速与抗 DDoS 属性：
 1. 生产域名优先建议在顶级注册商处配置 **CNAME 记录** 指向 `cname.vercel-dns.com.`。
-2. 根域名 (Apex Domain，如 `minimoi.net`) 推荐使用 **A 记录** 指向 Vercel 官方高防 IP（或按照 Vercel 后台指南配置 NS 服务器接管）。
+2. 根域名 (Apex Domain，如 `mimozo.net`) 推荐使用 **A 记录** 指向 Vercel 官方高防 IP（或按照 Vercel 后台指南配置 NS 服务器接管）。
 3. SSL/TLS 证书（HTTPS 绿锁）由 Vercel 依托 Let's Encrypt 自动颁发并续期，**不需**人工干预。
 
 ## 4. 后续保障规划 (Post-Deployment)
 部署完成后，必须回溯确保：
-- 第三方服务（Google Cloud Console 等）的重定向回调白名单中，追加完整的生产网址（如 `https://minimoi.net/api/auth/callback/google`）。
+- 第三方服务（Google Cloud Console 等）的重定向回调白名单中，追加完整的生产网址（如 `https://mimozo.net/api/auth/callback/google`）。

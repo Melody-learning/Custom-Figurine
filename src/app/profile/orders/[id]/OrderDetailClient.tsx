@@ -207,10 +207,10 @@ export default function OrderDetailClient({ order }: { order: SerializedOrder })
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <a
-                href="mailto:support@customfigurine.com"
+                href="mailto:support@mimozo.net"
                 className="px-4 py-2 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-subtle)] text-sm text-[var(--text-primary)] hover:border-[var(--brand-primary)]/30 transition-colors inline-flex items-center gap-2"
               >
-                📧 support@customfigurine.com
+                📧 support@mimozo.net
               </a>
               <button
                 onClick={() => setShowContactModal(false)}

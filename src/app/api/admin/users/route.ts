@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
+import { isSuperAdmin } from '@/lib/auth-utils';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -47,5 +48,7 @@ export async function GET(request: NextRequest) {
     total,
     page,
     totalPages: Math.ceil(total / limit),
+    callerIsSuperAdmin: isSuperAdmin(session.user.email),
   });
 }
+

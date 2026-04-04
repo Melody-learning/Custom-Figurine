@@ -218,7 +218,8 @@ export interface Product {
 export async function createCheckout(
   items: Array<{ variantId: string; quantity: number; customAttributes?: Array<{ key: string; value: string }> }>,
   userId?: string,
-  localOrderId?: string
+  localOrderId?: string,
+  discount?: { title: string; valueType: 'PERCENTAGE' | 'FIXED_AMOUNT'; value: number }
 ) {
   // Build the Draft Order using standard Variant IDs 
   // This ensures the predefined catalog image from Shopify is used on the Checkout page, avoiding a gray placeholder.
@@ -229,6 +230,7 @@ export async function createCheckout(
         draftOrder {
           id
           invoiceUrl
+          totalPrice
         }
         userErrors {
           message
@@ -265,24 +267,35 @@ export async function createCheckout(
     customAttributes.push({ key: "userId", value: userId });
   }
 
+  // 构造 Draft Order input
+  const input: Record<string, unknown> = {
+    lineItems: cleanItems,
+    customAttributes: customAttributes,
+    tags: ["custom-figurine", "api-generated-draft"],
+    note: "Checkout generated from frontend custom figurine app.",
+  };
+
+  // 注入 appliedDiscount（服务端权威折扣，直接嵌入 Draft Order）
+  if (discount) {
+    input.appliedDiscount = {
+      title: discount.title,
+      valueType: discount.valueType,
+      value: discount.value,
+    };
+  }
+
   const data = await adminShopifyFetch<{
     draftOrderCreate: {
       draftOrder: {
         id: string;
         invoiceUrl: string;
+        totalPrice: string;
       };
       userErrors: Array<{ message: string; field: string[] }>;
     };
   }>({
     query,
-    variables: {
-      input: {
-        lineItems: cleanItems,
-        customAttributes: customAttributes,
-        tags: ["custom-figurine", "api-generated-draft"],
-        note: "Checkout generated from frontend custom figurine app."
-      },
-    },
+    variables: { input },
   });
 
   if (data.draftOrderCreate.userErrors.length > 0) {
@@ -294,6 +307,7 @@ export async function createCheckout(
   return {
     webUrl: data.draftOrderCreate.draftOrder.invoiceUrl,
     draftOrderId: data.draftOrderCreate.draftOrder.id,
+    totalPrice: data.draftOrderCreate.draftOrder.totalPrice,
   };
 }
 

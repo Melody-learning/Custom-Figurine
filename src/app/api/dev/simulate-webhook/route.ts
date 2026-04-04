@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { updateOrderStatus } from '@/lib/order';
 import { OrderStatus } from '@prisma/client';
+import { WELCOME_COUPON } from '@/lib/constants/coupon';
 
 export async function POST(request: Request) {
   // 安全守卫：仅开发环境可用
@@ -36,6 +37,41 @@ export async function POST(request: Request) {
         updatedOrder = await updateOrderStatus(orderId, OrderStatus.PROCESSING, {
           shopifyOrderId: `dev-sim-${Date.now()}`,
         });
+
+        // ---- 核销优惠券（与 Webhook 逻辑保持一致）----
+        if (order.discountCode && order.userId) {
+          try {
+            if (order.discountCode === WELCOME_COUPON.CODE) {
+              // 欢迎券核销
+              await prisma.user.update({
+                where: { id: order.userId },
+                data: { hasWelcomeCoupon: false },
+              });
+              console.log(`[DEV] Welcome coupon revoked for user ${order.userId}`);
+            } else {
+              // KOL 券核销
+              const userCoupon = await prisma.userCoupon.findFirst({
+                where: { userId: order.userId, isUsed: false },
+                include: { promoCoupon: true },
+              });
+              if (userCoupon && userCoupon.promoCoupon.code === order.discountCode) {
+                await prisma.$transaction([
+                  prisma.userCoupon.update({
+                    where: { id: userCoupon.id },
+                    data: { isUsed: true, usedAt: new Date(), usedOrderId: order.id },
+                  }),
+                  prisma.promoCoupon.update({
+                    where: { id: userCoupon.promoCouponId },
+                    data: { usedCount: { increment: 1 } },
+                  }),
+                ]);
+                console.log(`[DEV] KOL coupon ${order.discountCode} revoked for user ${order.userId}`);
+              }
+            }
+          } catch (couponError) {
+            console.error('[DEV] Coupon revocation failed (non-blocking):', couponError);
+          }
+        }
         break;
 
       case 'payment_failure':

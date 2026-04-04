@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSession } from 'next-auth/react';
 
 interface AnimatedCouponBadgeProps {
   accentColor: string;
@@ -10,21 +11,47 @@ interface AnimatedCouponBadgeProps {
 
 export function AnimatedCouponBadge({ accentColor }: AnimatedCouponBadgeProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [hasCoupon, setHasCoupon] = useState(false);
+  const [label, setLabel] = useState('');
+  const { data: session } = useSession();
 
   useEffect(() => {
-    // If the user hasn't seen the animation this session, artificially delay the entrance by 2s
+    // Check for any available coupon
+    if (!session?.user?.id) return;
+
+    fetch('/api/coupon/active')
+      .then(res => res.json())
+      .then(data => {
+        if (data.coupons && data.coupons.length > 0) {
+          const best = data.coupons[0];
+          setHasCoupon(true);
+          setLabel(
+            best.discountType === 'PERCENTAGE'
+              ? `${best.discountValue}% OFF`
+              : `$${best.discountValue} OFF`
+          );
+        }
+      })
+      .catch(() => {});
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!hasCoupon) return;
+
     const hasSeenBadge = sessionStorage.getItem('has_seen_badge_minimal');
     
     if (!hasSeenBadge) {
       const timer = setTimeout(() => {
         setIsVisible(true);
         sessionStorage.setItem('has_seen_badge_minimal', 'true');
-      }, 2000); // 2 full seconds of absolute silence before appearing
+      }, 2000);
       return () => clearTimeout(timer);
     } else {
       setIsVisible(true);
     }
-  }, []);
+  }, [hasCoupon]);
+
+  if (!hasCoupon) return null;
 
   return (
     <AnimatePresence>
@@ -35,7 +62,7 @@ export function AnimatedCouponBadge({ accentColor }: AnimatedCouponBadgeProps) {
           transition={{
             type: "tween",
             ease: "easeInOut",
-            duration: 0.6 // Very natural, smooth sliding expansion
+            duration: 0.6
           }}
           className="relative origin-right overflow-hidden flex items-center"
         >
@@ -57,7 +84,7 @@ export function AnimatedCouponBadge({ accentColor }: AnimatedCouponBadgeProps) {
                 className="w-1.5 h-1.5 rounded-full shadow-sm animate-pulse opacity-80" 
                 style={{ backgroundColor: accentColor }} 
               />
-              10% OFF
+              {label}
             </span>
           </Link>
         </motion.div>

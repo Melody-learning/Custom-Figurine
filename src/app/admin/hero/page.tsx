@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff, Pencil, X, Loader2, Save } from 'lucide-react';
+import { adminFetch } from '@/lib/admin-fetch';
 
 interface HeroSlide {
   id: string;
@@ -117,35 +118,45 @@ export default function AdminHeroPage() {
 
   const fetchSlides = useCallback(async () => {
     setLoading(true);
-    const res = await fetch('/api/admin/hero');
-    const data = await res.json();
-    setSlides(data || []);
+    try {
+      const res = await adminFetch('/api/admin/hero');
+      if (!res.ok) {
+        console.error('Failed to fetch hero slides:', res.status);
+        setSlides([]);
+        setLoading(false);
+        return;
+      }
+      const data = await res.json();
+      setSlides(Array.isArray(data) ? data : []);
+    } catch {
+      setSlides([]);
+    }
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchSlides(); }, [fetchSlides]);
 
   const handleCreate = async (data: any) => {
-    await fetch('/api/admin/hero', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    await adminFetch('/api/admin/hero', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     setShowForm(false);
     fetchSlides();
   };
 
   const handleUpdate = async (data: any) => {
     if (!editingSlide) return;
-    await fetch(`/api/admin/hero/${editingSlide.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    await adminFetch(`/api/admin/hero/${editingSlide.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     setEditingSlide(null);
     fetchSlides();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this slide?')) return;
-    await fetch(`/api/admin/hero/${id}`, { method: 'DELETE' });
+    await adminFetch(`/api/admin/hero/${id}`, { method: 'DELETE' });
     fetchSlides();
   };
 
   const handleToggleActive = async (slide: HeroSlide) => {
-    await fetch(`/api/admin/hero/${slide.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !slide.isActive }) });
+    await adminFetch(`/api/admin/hero/${slide.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !slide.isActive }) });
     fetchSlides();
   };
 
@@ -161,7 +172,7 @@ export default function AdminHeroPage() {
       return { id: s.id, sortOrder: s.sortOrder };
     });
 
-    await fetch('/api/admin/hero', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order }) });
+    await adminFetch('/api/admin/hero', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order }) });
     fetchSlides();
   };
 

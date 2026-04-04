@@ -27,7 +27,7 @@ export function HeaderClient({ user }: HeaderClientProps) {
     <header className="sticky top-0 z-50 w-full border-b backdrop-blur-md transition-colors bg-opacity-80 bg-white" style={{ borderColor: 'rgba(226, 232, 240, 0.8)' }}>
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" onClick={() => resetGenerationFlow()} className="text-xl font-bold text-black">
-          CustomFigurine
+          Mimozo
         </Link>
 
         <nav className="flex items-center gap-4">
@@ -44,10 +44,8 @@ export function HeaderClient({ user }: HeaderClientProps) {
 
 
 
-          {/* Active Coupon Badge */}
-          {user?.hasWelcomeCoupon && (
-            <AnimatedCouponBadge accentColor="#3b82f6" />
-          )}
+          {/* Active Coupon Badge — self-managed visibility */}
+          <AnimatedCouponBadge accentColor="#3b82f6" />
 
           {/* Cart */}
           <button

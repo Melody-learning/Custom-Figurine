@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
+import { WELCOME_COUPON } from '@/lib/constants/coupon';
 import { updateOrderStatus } from '@/lib/order';
 import { OrderStatus } from '@prisma/client';
 
@@ -107,6 +108,42 @@ export async function POST(req: Request) {
           shopifyOrderId,
         });
         console.log(`WEBHOOK OK: ${order.orderNumber} → PROCESSING`, logCtx);
+
+        // ---- 核销优惠券 ----
+        if (order.discountCode && order.userId) {
+          try {
+            if (order.discountCode === WELCOME_COUPON.CODE) {
+              // 欢迎券核销
+              await prisma.user.update({
+                where: { id: order.userId },
+                data: { hasWelcomeCoupon: false },
+              });
+              console.log(`WEBHOOK: Welcome coupon revoked for user ${order.userId}`);
+            } else {
+              // KOL 券核销
+              const userCoupon = await prisma.userCoupon.findFirst({
+                where: { userId: order.userId, isUsed: false },
+                include: { promoCoupon: true },
+              });
+              if (userCoupon && userCoupon.promoCoupon.code === order.discountCode) {
+                await prisma.$transaction([
+                  prisma.userCoupon.update({
+                    where: { id: userCoupon.id },
+                    data: { isUsed: true, usedAt: new Date(), usedOrderId: order.id },
+                  }),
+                  prisma.promoCoupon.update({
+                    where: { id: userCoupon.promoCouponId },
+                    data: { usedCount: { increment: 1 } },
+                  }),
+                ]);
+                console.log(`WEBHOOK: KOL coupon ${order.discountCode} revoked for user ${order.userId}`);
+              }
+            }
+          } catch (couponError) {
+            // 核销失败不应阻塞订单状态转换
+            console.error('WEBHOOK: Coupon revocation failed (non-blocking):', couponError);
+          }
+        }
       } else {
         if (!order.shopifyOrderId) {
           await prisma.order.update({

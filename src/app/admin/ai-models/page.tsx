@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { Plus, Trash2, Eye, EyeOff, Pencil, X, Loader2, Save } from 'lucide-react';
+import { adminFetch } from '@/lib/admin-fetch';
 
 interface AiModel {
   id: string;
@@ -122,7 +123,7 @@ export default function AdminAiModelsPage() {
   const fetchModels = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/ai-models');
+      const res = await adminFetch('/api/admin/ai-models');
       const data = await res.json();
       setModels(Array.isArray(data) ? data : []);
     } catch {
@@ -134,26 +135,26 @@ export default function AdminAiModelsPage() {
   useEffect(() => { fetchModels(); }, [fetchModels]);
 
   const handleCreate = async (data: any) => {
-    await fetch('/api/admin/ai-models', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    await adminFetch('/api/admin/ai-models', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     setShowForm(false);
     fetchModels();
   };
 
   const handleUpdate = async (data: any) => {
     if (!editingModel) return;
-    await fetch(`/api/admin/ai-models/${editingModel.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    await adminFetch(`/api/admin/ai-models/${editingModel.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     setEditingModel(null);
     fetchModels();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this AI model? This cannot be undone.')) return;
-    await fetch(`/api/admin/ai-models/${id}`, { method: 'DELETE' });
+    await adminFetch(`/api/admin/ai-models/${id}`, { method: 'DELETE' });
     fetchModels();
   };
 
   const handleToggleActive = async (model: AiModel) => {
-    await fetch(`/api/admin/ai-models/${model.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !model.isActive }) });
+    await adminFetch(`/api/admin/ai-models/${model.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !model.isActive }) });
     fetchModels();
   };
 
@@ -171,7 +172,7 @@ export default function AdminAiModelsPage() {
   // 「设为当前」：将目标模型的 sortOrder 设为最小
   const handleSetAsCurrent = async (model: AiModel) => {
     const minSort = Math.min(...models.map(m => m.sortOrder)) - 1;
-    await fetch(`/api/admin/ai-models/${model.id}`, {
+    await adminFetch(`/api/admin/ai-models/${model.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive: true, sortOrder: minSort }),

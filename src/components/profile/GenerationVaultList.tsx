@@ -295,15 +295,12 @@ export default function GenerationVaultList({ initialAssets }: GenerationVaultLi
 
                  {/* Information Footer */}
                  <div className="flex flex-col gap-3 pt-2">
-                    <div className="flex items-center justify-between text-xs px-1">
-                       <span className="text-[var(--text-secondary)] font-medium bg-[var(--surface-raised)] px-2 py-1 rounded-md border border-[var(--border-subtle)]">
-                          {asset.modelId || 'VLM Render'}
-                       </span>
-                       <span className="text-[var(--text-tertiary)] flex items-center gap-1 opacity-70">
-                          <CalendarHeart className="w-3 h-3" />
-                          {dateLabel}
-                       </span>
-                    </div>
+                     <div className="flex items-center justify-end text-xs px-1">
+                        <span className="text-[var(--text-tertiary)] flex items-center gap-1 opacity-70">
+                           <CalendarHeart className="w-3 h-3" />
+                           {dateLabel}
+                        </span>
+                     </div>
                  </div>
               </div>
            );

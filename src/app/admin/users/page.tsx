@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Search, ChevronLeft, ChevronRight, Loader2, Shield, ShieldOff, Save } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Loader2, Shield, ShieldOff, Save, UserCog } from 'lucide-react';
+import { adminFetch } from '@/lib/admin-fetch';
+import { toast } from 'sonner';
 
 interface UserItem {
   id: string;
@@ -26,24 +28,26 @@ export default function AdminUsersPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ maxTotalGenerations: number } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [callerIsSuperAdmin, setCallerIsSuperAdmin] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: '15' });
     if (search) params.set('search', search);
 
-    const res = await fetch(`/api/admin/users?${params}`);
+    const res = await adminFetch(`/api/admin/users?${params}`);
     const data = await res.json();
     setItems(data.items || []);
     setTotal(data.total || 0);
     setTotalPages(data.totalPages || 1);
+    setCallerIsSuperAdmin(data.callerIsSuperAdmin || false);
     setLoading(false);
   }, [page, search]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const toggleWhitelist = async (user: UserItem) => {
-    await fetch(`/api/admin/users/${user.id}`, {
+    await adminFetch(`/api/admin/users/${user.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isWhitelisted: !user.isWhitelisted }),
@@ -59,7 +63,7 @@ export default function AdminUsersPage() {
   const saveEditing = async () => {
     if (!editingId || !editForm) return;
     setSaving(true);
-    await fetch(`/api/admin/users/${editingId}`, {
+    await adminFetch(`/api/admin/users/${editingId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editForm),
@@ -68,6 +72,26 @@ export default function AdminUsersPage() {
     setEditForm(null);
     setSaving(false);
     fetchData();
+  };
+
+  const toggleRole = async (user: UserItem) => {
+    const newRole = user.role === 'ADMIN' ? 'USER' : 'ADMIN';
+    try {
+      const res = await adminFetch(`/api/admin/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to update role');
+        return;
+      }
+      toast.success(`User ${user.email} is now ${newRole}`);
+      fetchData();
+    } catch {
+      // adminFetch handles 403 redirect
+    }
   };
 
   return (
@@ -100,6 +124,7 @@ export default function AdminUsersPage() {
               <th className="text-center px-4 py-3 text-white/40 font-medium">Generations</th>
               <th className="text-center px-4 py-3 text-white/40 font-medium">Max Total</th>
               <th className="text-center px-4 py-3 text-white/40 font-medium">Whitelist</th>
+              {callerIsSuperAdmin && <th className="text-center px-4 py-3 text-white/40 font-medium">Role</th>}
               <th className="text-right px-4 py-3 text-white/40 font-medium">Actions</th>
             </tr>
           </thead>
@@ -157,6 +182,22 @@ export default function AdminUsersPage() {
                     {user.isWhitelisted ? <Shield className="h-4 w-4" /> : <ShieldOff className="h-4 w-4" />}
                   </button>
                 </td>
+                {callerIsSuperAdmin && (
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => toggleRole(user)}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                        user.role === 'ADMIN'
+                          ? 'text-amber-400 hover:bg-amber-500/10'
+                          : 'text-white/30 hover:text-white/60 hover:bg-white/5'
+                      }`}
+                      title={user.role === 'ADMIN' ? 'Demote to User' : 'Promote to Admin'}
+                    >
+                      <UserCog className="h-3.5 w-3.5" />
+                      {user.role === 'ADMIN' ? 'Demote' : 'Promote'}
+                    </button>
+                  </td>
+                )}
                 <td className="px-4 py-3 text-right">
                   {editingId === user.id ? (
                     <div className="flex items-center gap-1 justify-end">

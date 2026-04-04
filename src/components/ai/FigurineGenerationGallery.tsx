@@ -104,7 +104,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
              showcaseCleanB64 = originalImageForShowcase.includes('base64,') ? originalImageForShowcase.split('base64,')[1] : originalImageForShowcase;
            }
          }
-         console.log(`[Gallery] stylePrompt (promptOverride):`, stylePrompt ? stylePrompt.slice(0, 80) + '...' : '(none — will use PROMPT_PRIMARY default)');
+
          const initResult = await startAsyncGeneration({
             originalImageB64: hasBgRemoved ? showcaseCleanB64 : (cleanB64 || ""),
             processedImageB64: hasBgRemoved ? (cleanB64 ? `data:image/jpeg;base64,${cleanB64}` : undefined) : undefined,
@@ -114,13 +114,16 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
          });
 
          if (!initResult.success || !initResult.assetId) {
-            if (initResult.reason === 'LIMIT_REACHED') {
-               setStatus('IDLE');
-               setQuotaError('LIMIT_REACHED');
-               return;
-            }
-            throw new Error(initResult.error || "Failed to initialize generation queue.");
-         }
+             if (initResult.reason === 'LIMIT_REACHED') {
+                setStatus('IDLE');
+                setQuotaError('LIMIT_REACHED');
+                return;
+             }
+             if (initResult.reason === 'unauthenticated' || initResult.reason === 'user_not_found') {
+                throw new Error('Your session has expired. Please refresh the page and log in again.');
+             }
+             throw new Error(initResult.error || "Failed to initialize generation queue.");
+          }
 
          const assetId = initResult.assetId;
          setCurrentAssetId(assetId);
@@ -266,7 +269,7 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
                    {isReferenceExpanded && (
                        <div className="mt-1.5 animate-in slide-in-from-top-2 fade-in duration-200">
                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                           <img src={referenceImageSrc!} className="w-full rounded bg-zinc-100 dark:bg-black object-contain aspect-square" alt="Target Subject" />
+                           <img src={referenceImageSrc!} className="w-full rounded bg-zinc-100 dark:bg-black object-contain aspect-square cursor-pointer hover:opacity-80 transition-opacity" alt="Target Subject" onClick={() => setLightboxSrc(referenceImageSrc)} />
                            
                            {/* Simplified Status Underneath */}
                            {status !== 'IDLE' && status !== 'COMPLETE' && status !== 'ERROR' && (

@@ -17,7 +17,7 @@ export default {
       if (user) {
         token.role = (user as { role?: string }).role || "USER";
         token.id = user.id;
-        token.hasWelcomeCoupon = (user as { hasWelcomeCoupon?: boolean }).hasWelcomeCoupon || false;
+        // NOTE: hasWelcomeCoupon is handled in auth.ts (Node Runtime) via DB lookup
       }
       return token;
     },

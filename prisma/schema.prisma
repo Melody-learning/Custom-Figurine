@@ -50,6 +50,7 @@ model User {
   // Custom Relations
   generatedAssets GeneratedAsset[]
   orders          Order[]
+  userCoupons     UserCoupon[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -261,4 +262,40 @@ model StylePreset {
   updatedAt       DateTime       @updatedAt
 
   @@unique([categoryId, slug])
+}
+
+// ==============
+// COUPON SYSTEM
+// ==============
+
+// 码定义表：Admin 创建的 KOL 促销码
+model PromoCoupon {
+  id            String       @id @default(cuid())
+  code          String       @unique          // "KOL_JAKE_15"
+  title         String                        // "Jake's Exclusive 15% Off"
+  discountType  String                        // "PERCENTAGE" | "FIXED_AMOUNT"
+  discountValue Float                         // 15 = 15%, 10.00 = $10
+  maxUses       Int?                          // null = 无限制
+  usedCount     Int          @default(0)
+  expiresAt     DateTime?                     // null = 永不过期
+  isActive      Boolean      @default(true)
+  redemptions   UserCoupon[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+// 用户兑换记录表
+model UserCoupon {
+  id            String       @id @default(cuid())
+  userId        String
+  promoCouponId String
+  isUsed        Boolean      @default(false)
+  usedAt        DateTime?
+  usedOrderId   String?                       // 使用时关联的订单 ID
+
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promoCoupon   PromoCoupon  @relation(fields: [promoCouponId], references: [id])
+  createdAt     DateTime     @default(now())
+
+  @@unique([userId, promoCouponId])           // 同一用户不能重复兑换同一码
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Upload, X, Check, Loader2 } from 'lucide-react';
+import { adminFetch } from '@/lib/admin-fetch';
 
 interface AiModelOption {
   id: string;
@@ -86,7 +87,7 @@ function PresetEditModal({
     try {
       if (isNew) {
         if (!slug.trim()) return;
-        await fetch('/api/admin/style-presets', {
+        await adminFetch('/api/admin/style-presets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -99,7 +100,7 @@ function PresetEditModal({
           }),
         });
       } else {
-        await fetch(`/api/admin/style-presets/${preset!.id}`, {
+        await adminFetch(`/api/admin/style-presets/${preset!.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -245,8 +246,8 @@ function StyleCategoryBlock({
     if (swapIdx < 0 || swapIdx >= siblings.length) return;
     const swap = siblings[swapIdx];
     await Promise.all([
-      fetch(`/api/admin/style-presets/${preset.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sortOrder: swap.sortOrder }) }),
-      fetch(`/api/admin/style-presets/${swap.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sortOrder: preset.sortOrder }) }),
+      adminFetch(`/api/admin/style-presets/${preset.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sortOrder: swap.sortOrder }) }),
+      adminFetch(`/api/admin/style-presets/${swap.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sortOrder: preset.sortOrder }) }),
     ]);
     onRefresh();
   }
@@ -254,7 +255,7 @@ function StyleCategoryBlock({
   async function deletePreset(id: string) {
     if (!confirm('Delete this preset? This cannot be undone.')) return;
     setDeletingId(id);
-    await fetch(`/api/admin/style-presets/${id}`, { method: 'DELETE' });
+    await adminFetch(`/api/admin/style-presets/${id}`, { method: 'DELETE' });
     setDeletingId(null);
     onRefresh();
   }
@@ -363,7 +364,7 @@ function AddCategoryModal({ onClose, onSave }: { onClose: () => void; onSave: ()
     if (!slug.trim() || !displayName.trim()) return;
     setSaving(true);
     try {
-      await fetch('/api/admin/style-categories', {
+      await adminFetch('/api/admin/style-categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug: slug.trim(), displayName: displayName.trim(), name: name.trim() || displayName.trim(), accentColor, icon, isOrderable }),
@@ -443,8 +444,8 @@ export default function StylesAdminPage() {
   async function loadData() {
     setLoading(true);
     const [catRes, modelRes] = await Promise.all([
-      fetch('/api/admin/style-categories'),
-      fetch('/api/admin/ai-models'),
+      adminFetch('/api/admin/style-categories'),
+      adminFetch('/api/admin/ai-models'),
     ]);
     setCategories(await catRes.json());
     setAiModels(await modelRes.json());

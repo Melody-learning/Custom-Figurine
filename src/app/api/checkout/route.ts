@@ -3,6 +3,7 @@ import { createCheckout } from '@/lib/shopify';
 import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 import { generateOrderNumber } from '@/lib/order';
+import { WELCOME_COUPON, type AppliedDiscount } from '@/lib/constants/coupon';
 
 interface CheckoutItem {
   variantId: string;
@@ -19,8 +20,115 @@ interface CheckoutItem {
 
 interface CheckoutRequestBody {
   items: CheckoutItem[];
-  discountCode?: string;
-  discountAmount?: number;
+  // Optional: user can specify which coupon to use. Server validates ownership.
+  selectedCouponCode?: string;
+}
+
+/**
+ * Resolve the best available discount for this user.
+ * Compares actual discount amounts (needs subtotal) and picks the largest.
+ * Returns null if no discount is available.
+ */
+async function resolveUserDiscount(userId: string, subtotal: number, selectedCode?: string): Promise<{
+  discount: AppliedDiscount;
+  code: string;
+  source: 'KOL' | 'WELCOME';
+  userCouponId?: string;
+} | null> {
+  // User explicitly chose "No coupon"
+  if (selectedCode === '__NONE__') return null;
+  // Helper: calculate actual dollar discount
+  const calcAmount = (type: string, value: number) =>
+    type === 'PERCENTAGE'
+      ? subtotal * (value / 100)
+      : Math.min(value, subtotal);
+
+  // Candidate list
+  const candidates: Array<{
+    discount: AppliedDiscount;
+    code: string;
+    source: 'KOL' | 'WELCOME';
+    userCouponId?: string;
+    amount: number;
+  }> = [];
+
+  // 1. Check welcome coupon
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { hasWelcomeCoupon: true },
+  });
+
+  if (user?.hasWelcomeCoupon) {
+    candidates.push({
+      discount: {
+        title: WELCOME_COUPON.TITLE,
+        valueType: WELCOME_COUPON.VALUE_TYPE,
+        value: WELCOME_COUPON.VALUE,
+      },
+      code: WELCOME_COUPON.CODE,
+      source: 'WELCOME',
+      amount: calcAmount(WELCOME_COUPON.VALUE_TYPE, WELCOME_COUPON.VALUE),
+    });
+  }
+
+  // 2. Check KOL coupons (unused, active, non-expired)
+  const kolCoupons = await prisma.userCoupon.findMany({
+    where: {
+      userId,
+      isUsed: false,
+      promoCoupon: {
+        isActive: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } },
+        ],
+      },
+    },
+    include: { promoCoupon: true },
+  });
+
+  for (const uc of kolCoupons) {
+    if (uc.promoCoupon) {
+      candidates.push({
+        discount: {
+          title: uc.promoCoupon.title,
+          valueType: uc.promoCoupon.discountType as 'PERCENTAGE' | 'FIXED_AMOUNT',
+          value: uc.promoCoupon.discountValue,
+        },
+        code: uc.promoCoupon.code,
+        source: 'KOL',
+        userCouponId: uc.id,
+        amount: calcAmount(uc.promoCoupon.discountType, uc.promoCoupon.discountValue),
+      });
+    }
+  }
+
+  if (candidates.length === 0) return null;
+
+  // If user specified a coupon, validate and use it
+  if (selectedCode) {
+    const chosen = candidates.find(c => c.code === selectedCode);
+    if (chosen) {
+      return {
+        discount: chosen.discount,
+        code: chosen.code,
+        source: chosen.source,
+        userCouponId: chosen.userCouponId,
+      };
+    }
+    // selectedCode not found in user's available coupons — fall through to best
+  }
+
+  // Default: pick the candidate with the highest actual discount amount
+  candidates.sort((a, b) => b.amount - a.amount);
+  const best = candidates[0];
+
+  return {
+    discount: best.discount,
+    code: best.code,
+    source: best.source,
+    userCouponId: best.userCouponId,
+  };
 }
 
 export async function POST(request: Request) {
@@ -37,7 +145,7 @@ export async function POST(request: Request) {
     }
 
     const body: CheckoutRequestBody = await request.json();
-    const { items, discountCode, discountAmount = 0 } = body;
+    const { items, selectedCouponCode } = body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -46,24 +154,38 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. 计算金额
+    // 2. 计算 subtotal（先算小计，才能比较折扣大小）
     const subtotalAmount = items.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     );
-    const totalAmount = subtotalAmount - discountAmount;
 
-    // 3. 生成订单号
+    // 3. 服务端折扣决策（传入用户选择的券码，服务端验证后应用）
+    const resolvedDiscount = await resolveUserDiscount(userId, subtotalAmount, selectedCouponCode);
+
+    let discountAmount = 0;
+    if (resolvedDiscount) {
+      if (resolvedDiscount.discount.valueType === 'PERCENTAGE') {
+        discountAmount = subtotalAmount * (resolvedDiscount.discount.value / 100);
+      } else {
+        discountAmount = Math.min(resolvedDiscount.discount.value, subtotalAmount);
+      }
+    }
+    // Round to 2 decimal places
+    discountAmount = Math.round(discountAmount * 100) / 100;
+    const totalAmount = Math.round((subtotalAmount - discountAmount) * 100) / 100;
+
+    // 4. 生成订单号
     const orderNumber = await generateOrderNumber();
 
-    // 4. 创建本地 Order (PENDING) + OrderItems
+    // 5. 创建本地 Order (PENDING) + OrderItems
     const order = await prisma.order.create({
       data: {
         orderNumber,
         userId,
         status: 'PENDING',
         subtotalAmount,
-        discountCode: discountCode || null,
+        discountCode: resolvedDiscount?.code || null,
         discountAmount,
         totalAmount,
         currency: 'USD',
@@ -86,7 +208,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // 5. 尝试创建 Shopify Draft Order
+    // 6. 尝试创建 Shopify Draft Order
     try {
       // 构建 Shopify 需要的 items 格式
       const shopifyItems = items.map((item) => {
@@ -110,7 +232,6 @@ export async function POST(request: Request) {
         if (item.customInstructions) {
           customAttrs.push({ key: '_Custom Instructions', value: item.customInstructions });
         }
-        // 追加前端传来的 customAttributes（已上传到 Blob 的）
         if (item.customAttributes && item.customAttributes.length > 0) {
           customAttrs.push(...item.customAttributes.filter(attr => attr.value && attr.value.trim() !== ''));
         }
@@ -122,10 +243,15 @@ export async function POST(request: Request) {
         return shopifyItem;
       });
 
-      // 注入 localOrderId 到订单级 customAttributes（替代 userId）
-      const checkout = await createCheckout(shopifyItems, userId, order.id);
+      // 传入服务端决定的折扣（直接嵌入 Draft Order 的 appliedDiscount）
+      const checkout = await createCheckout(
+        shopifyItems,
+        userId,
+        order.id,
+        resolvedDiscount?.discount // undefined if no discount
+      );
 
-      // 6. 回写 Shopify 信息到本地 Order
+      // 7. 回写 Shopify 信息到本地 Order
       await prisma.order.update({
         where: { id: order.id },
         data: {
@@ -133,6 +259,8 @@ export async function POST(request: Request) {
           invoiceUrl: checkout.webUrl,
         },
       });
+
+      // NOTE: 优惠券不在此处核销！核销由 Shopify Webhook (orders/paid) 触发
 
       return NextResponse.json({
         url: checkout.webUrl,

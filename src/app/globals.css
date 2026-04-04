@@ -113,6 +113,17 @@ body {
   color: var(--foreground);
 }
 
+/* Global cursor: all interactive elements default to pointer */
+button,
+[role="button"],
+summary {
+  cursor: pointer;
+}
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* Hide scrollbar for clean look */
 ::-webkit-scrollbar {
   width: 8px;

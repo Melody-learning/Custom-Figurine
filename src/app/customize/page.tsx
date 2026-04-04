@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, Sparkles, Loader2, ArrowRight, Check, Image as ImageIcon, Smile, Triangle, Box, Aperture } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { getProducts, Product, ProductVariant } from '@/lib/shopify';
@@ -12,7 +12,7 @@ import { ClickableImage } from '@/components/ImageLightbox';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { removeImageBackground, isBgRemovalEnabled } from '@/lib/remove-background';
+import { removeImageBackground, isBgRemovalEnabled, type BgRemovalProgress } from '@/lib/remove-background';
 import { STYLE_CATEGORIES, StylePreset, StyleCategory, getDefaultPreset } from '@/lib/constants/style-presets';
 
 type Step = 'upload' | 'style' | 'generate' | 'confirm';
@@ -22,6 +22,8 @@ export default function CustomizePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef = useRef(0);
   const { t: translate } = useTranslation();
   const { config } = useThemeConfig();
   const { data: session } = useSession();
@@ -78,6 +80,7 @@ export default function CustomizePage() {
   const [bgOriginal, setBgOriginal] = useState<string | null>(null);     // 原图（抠图前）
   const [bgProcessed, setBgProcessed] = useState<string | null>(null);   // 抠图结果缓存
   const [bgProcessing, setBgProcessing] = useState(false);               // WASM 是否在执行
+  const [bgProgress, setBgProgress] = useState<BgRemovalProgress | null>(null); // 抠图实时进度
   const [bgFilterEnabled, setBgFilterEnabled] = useState(false);          // Toggle 开关
   const bgCancelledRef = useRef(false);                                  // 抠图取消标记
   const bgSourceRef = useRef<string | null>(null);                       // PNG 源图（用于重新抠图）
@@ -316,10 +319,9 @@ export default function CustomizePage() {
     });
   };
 
-  // 处理文件上传：双模式压缩 + 智能抠图流程
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // 核心文件处理逻辑（click-upload 和 drag-drop 共享）
+  const processUploadedFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) return;
 
     try {
       const bgEnabled = isBgRemovalEnabled() && bgFilterEnabled;
@@ -348,9 +350,11 @@ export default function CustomizePage() {
         // 执行抠图（setTimeout 让 React 先渲染 loading 态）
         bgCancelledRef.current = false;
         setBgProcessing(true);
+        setBgProgress(null);
         setTimeout(() => {
-          removeImageBackground(pngBase64).then(async (result) => {
+          removeImageBackground(pngBase64, (p) => setBgProgress(p)).then(async (result) => {
             setBgProcessing(false);
+            setBgProgress(null);
             if (bgCancelledRef.current) {
               console.log('[BgRemoval] Cancelled by user. Ignoring result.');
               return;
@@ -383,6 +387,53 @@ export default function CustomizePage() {
       alert(t('uploadError') || 'Failed to process image');
     }
   };
+
+  // 处理文件上传（click 模式）
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processUploadedFile(file);
+  };
+
+  // Drag-and-drop 事件处理
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounterRef.current = 0;
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        processUploadedFile(file);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleGenerate = async (overrideImageTarget?: string) => {
@@ -640,7 +691,17 @@ export default function CustomizePage() {
                 {/* Start Crafting 按钮 — 正式启动 */}
                 <div className="pt-2">
                   <button
-                    onClick={() => setStep('generate')}
+                    onClick={() => {
+                      if (!session) {
+                        if (uploadedImage) {
+                          sessionStorage.setItem('pendingCustomFigurineImage', uploadedImage);
+                        }
+                        toast(t('loginRequired') as string);
+                        setLoginModalOpen(true);
+                        return;
+                      }
+                      setStep('generate');
+                    }}
                     className={`w-full flex items-center justify-center gap-3 py-4 text-base font-bold rounded-2xl transition-all ${styles.button} hover:scale-[1.01] active:scale-[0.99]`}
                   >
                     <Sparkles className="w-5 h-5" />
@@ -671,16 +732,24 @@ export default function CustomizePage() {
             {!uploadedImage ? (
                 <>
                 <div
-                  className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 transition-colors hover:bg-gray-50/50 cursor-pointer"
-                  style={{ borderColor: config.colors.border }}
+                  className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 transition-all duration-200 cursor-pointer ${
+                    isDragging
+                      ? 'border-purple-500 bg-purple-50/60 dark:bg-purple-900/20 scale-[1.02] shadow-lg shadow-purple-500/10'
+                      : 'hover:bg-gray-50/50'
+                  }`}
+                  style={isDragging ? {} : { borderColor: config.colors.border }}
                   onClick={() => fileInputRef.current?.click()}
+                  onDragEnter={handleDragEnter}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
                 >
-                  <Upload className="mb-4 h-10 w-10 opacity-70" style={{ color: config.colors.primary }} />
+                  <Upload className={`mb-4 h-10 w-10 transition-all duration-200 ${isDragging ? 'opacity-90 scale-110 -translate-y-1' : 'opacity-70'}`} style={{ color: isDragging ? '#a855f7' : config.colors.primary }} />
                   <p className="mb-2 text-center font-medium" style={{ color: config.colors.text }}>
-                    {t('uploadTitle') || '点击或拖拽上传图片'}
+                    {isDragging ? 'Drop your image here' : (t('uploadTitle') || '点击或拖拽上传图片')}
                   </p>
                   <p className="text-center text-xs opacity-60" style={{ color: config.colors.textMuted }}>
-                    {t('uploadFormats') || '支持 JPG, PNG, WEBP (建议竖版)'}
+                    {isDragging ? 'Release to start processing' : (t('uploadFormats') || '支持 JPG, PNG, WEBP (建议竖版)')}
                   </p>
                   <input
                     type="file"
@@ -713,10 +782,36 @@ export default function CustomizePage() {
                            alt="Preview" 
                            className="object-contain max-h-[300px] w-auto h-auto rounded-lg" 
                         />
-                        {/* [TEMP] 抠图状态角标 */}
+                        {/* 抠图进度覆盖层 */}
                         {bgProcessing && (
-                          <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1">
-                            <Loader2 className="h-3 w-3 animate-spin" /> Removing BG...
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] rounded-xl transition-all z-10">
+                            <Loader2 className="h-6 w-6 animate-spin text-white mb-2" />
+                            <p className="text-white text-xs font-medium mb-2">
+                              {bgProgress?.stage === 'downloading' ? '⬇ Downloading AI Model…' : '✨ Removing Background…'}
+                            </p>
+                            <div className="w-3/5 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-white rounded-full transition-all duration-500 ease-out"
+                                style={{ width: `${Math.round((bgProgress?.progress ?? 0) * 100)}%` }}
+                              />
+                            </div>
+                            <p className="text-white/60 text-[10px] mt-1.5">
+                              {Math.round((bgProgress?.progress ?? 0) * 100)}%
+                            </p>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                bgCancelledRef.current = true;
+                                setBgProcessing(false);
+                                setBgProgress(null);
+                                setBgFilterEnabled(false);
+                                if (bgOriginal) setUploadedImage(bgOriginal);
+                              }}
+                              className="mt-3 text-white/50 hover:text-white text-[10px] underline underline-offset-2 transition-colors"
+                            >
+                              Cancel
+                            </button>
                           </div>
                         )}
                     </div>
@@ -758,11 +853,13 @@ export default function CustomizePage() {
                               } else if (bgSourceRef.current) {
                                 bgCancelledRef.current = false;
                                 setBgProcessing(true);
+                                setBgProgress(null);
                                 setBgFilterEnabled(true);
                                 const pngSrc = bgSourceRef.current;
                                 setTimeout(() => {
-                                  removeImageBackground(pngSrc).then(async (result) => {
+                                  removeImageBackground(pngSrc, (p) => setBgProgress(p)).then(async (result) => {
                                     setBgProcessing(false);
+                                    setBgProgress(null);
                                     if (bgCancelledRef.current) return;
                                     if (result.wasProcessed) {
                                       const jpegResult = await downgradeToJpeg(result.processedImageUrl);
@@ -785,7 +882,7 @@ export default function CustomizePage() {
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-50" />
                                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
                                 </span>
-                                <span>Removing BG…</span>
+                                <span>{bgProgress ? `${Math.round(bgProgress.progress * 100)}%` : 'Removing BG…'}</span>
                               </>
                             ) : bgProcessed ? (
                               <>
@@ -795,13 +892,17 @@ export default function CustomizePage() {
                             ) : (
                               <>
                                 <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                                <span>Remove BG</span>
+                                <div className="flex flex-col items-center leading-tight">
+                                  <span>Remove BG</span>
+                                  <span className="text-[9px] font-normal opacity-40">~10-30s</span>
+                                </div>
                               </>
                             )}
                           </button>
                         </div>
                       );
                     })()}
+
 
                        <div className="flex flex-col sm:flex-row gap-4 w-full">
 
@@ -833,7 +934,17 @@ export default function CustomizePage() {
 
                          <button
 
-                           onClick={() => setStep('style')}
+                           onClick={() => {
+                             if (!session) {
+                               if (uploadedImage) {
+                                 sessionStorage.setItem('pendingCustomFigurineImage', uploadedImage);
+                               }
+                               toast(t('loginRequired') as string);
+                               setLoginModalOpen(true);
+                               return;
+                             }
+                             setStep('style');
+                           }}
 
                            disabled={bgProcessing}
 

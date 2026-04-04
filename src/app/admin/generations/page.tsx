@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { Trash2, Search, ChevronLeft, ChevronRight, ExternalLink, Loader2 } from 'lucide-react';
+import { adminFetch } from '@/lib/admin-fetch';
 
 interface Generation {
   id: string;
@@ -45,7 +46,7 @@ export default function AdminGenerationsPage() {
     if (statusFilter) params.set('status', statusFilter);
     if (search) params.set('search', search);
 
-    const res = await fetch(`/api/admin/generations?${params}`);
+    const res = await adminFetch(`/api/admin/generations?${params}`);
     const data = await res.json();
     setItems(data.items || []);
     setTotal(data.total || 0);
@@ -57,7 +58,7 @@ export default function AdminGenerationsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this generation record?')) return;
-    await fetch(`/api/admin/generations/${id}`, { method: 'DELETE' });
+    await adminFetch(`/api/admin/generations/${id}`, { method: 'DELETE' });
     fetchData();
   };
 

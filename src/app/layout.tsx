@@ -16,8 +16,8 @@ import { LoginModal } from "@/components/auth/LoginModal";
 import { TawkToChat } from "@/components/TawkToChat";
 
 export const metadata: Metadata = {
-  title: "Custom Figurine - Personalized 3D Prints",
-  description: "Upload your image and create custom 3D figurines",
+  title: "Mimozo - Custom 3D Figurines From Your Photos",
+  description: "Upload your photo and transform it into a unique handcrafted 3D figurine. AI-powered personalization, premium quality.",
 };
 
 export default async function RootLayout({

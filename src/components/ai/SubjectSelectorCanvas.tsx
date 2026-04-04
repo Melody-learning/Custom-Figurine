@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { detectImageSubjects, SubjectDetectionResult } from '@/app/actions/ai-subject';
 
 const BOX_COLORS = [
@@ -22,12 +22,15 @@ export default function SubjectSelectorCanvas({ onSelectionConfirmed }: SubjectS
   const [geminiResult, setGeminiResult] = useState<SubjectDetectionResult | null>(null);
   const [geminiError, setGeminiError] = useState<string | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   const originalImgRef = useRef<HTMLImageElement>(null);
+  const dragCounterRef = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // Shared file processing logic for both click-upload and drag-drop
+  const processFile = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) return;
 
     const objectUrl = URL.createObjectURL(file);
     setFileUrl(objectUrl);
@@ -79,7 +82,52 @@ export default function SubjectSelectorCanvas({ onSelectionConfirmed }: SubjectS
       img.src = b64Original;
     };
     reader.readAsDataURL(file);
+  }, []);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    processFile(file);
   };
+
+  // Drag-and-drop handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounterRef.current = 0;
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        processFile(file);
+      }
+    }
+  }, [processFile]);
 
   const handleSubjectToggle = (subjectId: string) => {
     setSelectedSubjectId(prev => prev === subjectId ? null : subjectId);
@@ -120,15 +168,33 @@ export default function SubjectSelectorCanvas({ onSelectionConfirmed }: SubjectS
   return (
     <div className="w-full max-w-4xl mx-auto p-6 space-y-8 bg-zinc-50 dark:bg-zinc-900 rounded-3xl border dark:border-zinc-800 shadow-sm relative overflow-hidden">
       
-      {/* Upload Step */}
-      <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors">
+      {/* Upload Step — supports click + drag-and-drop */}
+      <div
+        className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-2xl transition-all duration-200 ${
+          isDragging
+            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 scale-[1.02] shadow-lg shadow-purple-500/10'
+            : 'border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800/50'
+        }`}
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <label className="cursor-pointer flex flex-col items-center">
-           <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 text-purple-600 rounded-full flex items-center justify-center mb-4">
-             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+           <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-colors duration-200 ${
+             isDragging
+               ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-700 dark:text-purple-300'
+               : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600'
+           }`}>
+             <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-transform duration-200 ${isDragging ? 'scale-110 -translate-y-0.5' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
            </div>
-           <span className="font-medium text-zinc-900 dark:text-zinc-100">Upload Family/Pet Photo</span>
-           <span className="text-sm text-zinc-500 mt-1">AI 将自动扫描识别目标区域坐标</span>
-           <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+           <span className="font-medium text-zinc-900 dark:text-zinc-100">
+             {isDragging ? 'Drop your image here' : 'Upload Family/Pet Photo'}
+           </span>
+           <span className="text-sm text-zinc-500 mt-1">
+             {isDragging ? 'Release to start AI scanning' : 'Drag & drop or click to select · AI will auto-detect subjects'}
+           </span>
+           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
         </label>
       </div>
 
