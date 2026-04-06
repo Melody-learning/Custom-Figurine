@@ -138,7 +138,7 @@ export default function Home() {
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold md:text-4xl" style={{ color: config.colors.text }}>How It's Made</h2>
             <p className="mx-auto max-w-2xl text-lg" style={{ color: config.colors.textMuted }}>
-              From your photo to your doorstep, we follow a meticulous process to create your perfect figurine
+              Every figurine is meticulously handcrafted with secondary quality inspection. Estimated delivery in 2–4 weeks.
             </p>
           </div>
 

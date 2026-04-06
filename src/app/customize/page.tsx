@@ -1112,6 +1112,9 @@ export default function CustomizePage() {
                     ))}
                   </ul>
                 </div>
+                <p className="text-[11px] leading-relaxed opacity-50 mt-1 px-1" style={{ color: config.colors.textMuted }}>
+                  Each figurine is crafted for a single subject by default. Photos with multiple subjects may require additional review.
+                </p>
 
                 {isAddedToCart ? (
                     <div className="flex flex-col gap-3 mt-4">
