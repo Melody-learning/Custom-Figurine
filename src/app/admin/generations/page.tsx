@@ -13,8 +13,16 @@ interface Generation {
   showcaseImage: string | null;
   status: string;
   prompt: string | null;
+  modelId: string | null;
   createdAt: string;
   user: { id: string; name: string | null; email: string | null; image: string | null };
+}
+
+function getModelBadge(modelId: string | null) {
+  if (!modelId) return { label: 'N/A', color: 'text-white/20' };
+  if (modelId.startsWith('gemini')) return { label: modelId, color: 'text-blue-400' };
+  if (modelId.startsWith('seedream')) return { label: modelId, color: 'text-orange-400' };
+  return { label: modelId, color: 'text-purple-400' };
 }
 
 const STATUS_OPTIONS = [
@@ -107,17 +115,18 @@ export default function AdminGenerationsPage() {
             <tr className="border-b border-white/5 bg-white/[0.02]">
               <th className="text-left px-4 py-3 text-white/40 font-medium">User</th>
               <th className="text-left px-4 py-3 text-white/40 font-medium">Status</th>
+              <th className="text-left px-4 py-3 text-white/40 font-medium">Model</th>
               <th className="text-left px-4 py-3 text-white/40 font-medium">Created</th>
               <th className="text-right px-4 py-3 text-white/40 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={4} className="px-4 py-12 text-center text-white/30">
+              <tr><td colSpan={5} className="px-4 py-12 text-center text-white/30">
                 <Loader2 className="h-5 w-5 animate-spin mx-auto" />
               </td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={4} className="px-4 py-12 text-center text-white/30">No records found</td></tr>
+              <tr><td colSpan={5} className="px-4 py-12 text-center text-white/30">No records found</td></tr>
             ) : items.map((item) => (
               <React.Fragment key={item.id}>
                 <tr
@@ -144,6 +153,16 @@ export default function AdminGenerationsPage() {
                       {item.status}
                     </span>
                   </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const badge = getModelBadge(item.modelId);
+                      return (
+                        <code className={`text-[11px] font-mono ${badge.color}`}>
+                          {badge.label}
+                        </code>
+                      );
+                    })()}
+                  </td>
                   <td className="px-4 py-3 text-white/40 text-xs">
                     {new Date(item.createdAt).toLocaleString()}
                   </td>
@@ -160,7 +179,7 @@ export default function AdminGenerationsPage() {
                 {/* Expanded Detail Row */}
                 {expandedId === item.id && (
                   <tr className="border-b border-white/5 bg-white/[0.01]">
-                    <td colSpan={4} className="px-4 py-4">
+                    <td colSpan={5} className="px-4 py-4">
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {[
                           { label: 'Primary', src: item.resultImage },
