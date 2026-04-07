@@ -976,6 +976,9 @@ export default function CustomizePage() {
                 subjectImageB64={uploadedImage}
                  originalImageForShowcase={bgOriginal || uploadedImage}
                 stylePrompt={selectedPreset?.primaryPrompt}
+                styleModelId={selectedPreset?.aiModelId}
+                styleCategorySlug={selectedCategory?.id}
+                stylePresetSlug={selectedPreset?.id}
                 initialViews={generatedViews}
                 onCancel={() => {
                    if (editingVaultAssetId) {

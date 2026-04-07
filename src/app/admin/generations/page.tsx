@@ -13,16 +13,26 @@ interface Generation {
   showcaseImage: string | null;
   status: string;
   prompt: string | null;
-  modelId: string | null;
+  modelId: string | null;              // [Deprecated] 旧字段，向后兼容
+  primaryModelId: string | null;       // Task 1 (primary render) 使用的模型
+  secondaryModelId: string | null;     // Task 2/3/4 使用的模型
+  styleCategorySlug: string | null;    // 风格大类 slug
+  stylePresetSlug: string | null;      // 风格子类 slug
   createdAt: string;
   user: { id: string; name: string | null; email: string | null; image: string | null };
 }
 
+/** 根据 modelId 前缀返回不同颜色的 badge */
 function getModelBadge(modelId: string | null) {
   if (!modelId) return { label: 'N/A', color: 'text-white/20' };
   if (modelId.startsWith('gemini')) return { label: modelId, color: 'text-blue-400' };
   if (modelId.startsWith('seedream')) return { label: modelId, color: 'text-orange-400' };
   return { label: modelId, color: 'text-purple-400' };
+}
+
+/** 获取有效的 primary 模型 ID（新字段优先，fallback 旧字段） */
+function getEffectivePrimaryModel(item: Generation): string | null {
+  return item.primaryModelId || item.modelId || null;
 }
 
 const STATUS_OPTIONS = [
@@ -116,18 +126,24 @@ export default function AdminGenerationsPage() {
               <th className="text-left px-4 py-3 text-white/40 font-medium">User</th>
               <th className="text-left px-4 py-3 text-white/40 font-medium">Status</th>
               <th className="text-left px-4 py-3 text-white/40 font-medium">Model</th>
+              <th className="text-left px-4 py-3 text-white/40 font-medium">Style</th>
               <th className="text-left px-4 py-3 text-white/40 font-medium">Created</th>
               <th className="text-right px-4 py-3 text-white/40 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-12 text-center text-white/30">
+              <tr><td colSpan={6} className="px-4 py-12 text-center text-white/30">
                 <Loader2 className="h-5 w-5 animate-spin mx-auto" />
               </td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-12 text-center text-white/30">No records found</td></tr>
-            ) : items.map((item) => (
+              <tr><td colSpan={6} className="px-4 py-12 text-center text-white/30">No records found</td></tr>
+            ) : items.map((item) => {
+              const effectivePrimary = getEffectivePrimaryModel(item);
+              const primaryBadge = getModelBadge(effectivePrimary);
+              const hasDualModel = item.primaryModelId && item.secondaryModelId && item.primaryModelId !== item.secondaryModelId;
+
+              return (
               <React.Fragment key={item.id}>
                 <tr
                   className="border-b border-white/5 hover:bg-white/[0.02] cursor-pointer transition-colors"
@@ -154,14 +170,28 @@ export default function AdminGenerationsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {(() => {
-                      const badge = getModelBadge(item.modelId);
-                      return (
-                        <code className={`text-[11px] font-mono ${badge.color}`}>
-                          {badge.label}
-                        </code>
-                      );
-                    })()}
+                    <div className="flex flex-col gap-0.5">
+                      <code className={`text-[11px] font-mono ${primaryBadge.color}`}>
+                        {primaryBadge.label}
+                      </code>
+                      {hasDualModel && (
+                        <span className="text-[10px] text-white/20" title={`Secondary: ${item.secondaryModelId}`}>
+                          +secondary: <code className="text-white/30">{item.secondaryModelId}</code>
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {item.styleCategorySlug ? (
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs text-white/60">{item.styleCategorySlug}</span>
+                        {item.stylePresetSlug && item.stylePresetSlug !== item.styleCategorySlug && (
+                          <span className="text-[10px] text-white/30">{item.stylePresetSlug}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-white/15 text-xs">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-white/40 text-xs">
                     {new Date(item.createdAt).toLocaleString()}
@@ -179,16 +209,23 @@ export default function AdminGenerationsPage() {
                 {/* Expanded Detail Row */}
                 {expandedId === item.id && (
                   <tr className="border-b border-white/5 bg-white/[0.01]">
-                    <td colSpan={5} className="px-4 py-4">
+                    <td colSpan={6} className="px-4 py-4">
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {[
-                          { label: 'Primary', src: item.resultImage },
-                          { label: 'Back', src: item.backImage },
-                          { label: 'Side', src: item.sideImage },
-                          { label: 'Showcase', src: item.showcaseImage },
-                        ].map((view) => (
+                          { label: 'Primary', src: item.resultImage, model: effectivePrimary },
+                          { label: 'Back', src: item.backImage, model: item.secondaryModelId || effectivePrimary },
+                          { label: 'Side', src: item.sideImage, model: item.secondaryModelId || effectivePrimary },
+                          { label: 'Showcase', src: item.showcaseImage, model: item.secondaryModelId || effectivePrimary },
+                        ].map((view) => {
+                          const viewBadge = getModelBadge(view.model);
+                          return (
                           <div key={view.label} className="space-y-1">
-                            <div className="text-xs text-white/30">{view.label}</div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-white/30">{view.label}</span>
+                              <code className={`text-[9px] font-mono ${viewBadge.color} opacity-60`} title={viewBadge.label}>
+                                {viewBadge.label.length > 20 ? viewBadge.label.slice(0, 18) + '…' : viewBadge.label}
+                              </code>
+                            </div>
                             {view.src ? (
                               <a href={view.src} target="_blank" rel="noopener noreferrer" className="block relative group">
                                 <img src={view.src} alt={view.label} className="w-full aspect-square object-cover rounded-lg border border-white/5" />
@@ -200,13 +237,15 @@ export default function AdminGenerationsPage() {
                               <div className="w-full aspect-square rounded-lg border border-white/5 bg-white/[0.02] flex items-center justify-center text-white/10 text-xs">N/A</div>
                             )}
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </td>
                   </tr>
                 )}
               </React.Fragment>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -236,3 +275,4 @@ export default function AdminGenerationsPage() {
     </div>
   );
 }
+

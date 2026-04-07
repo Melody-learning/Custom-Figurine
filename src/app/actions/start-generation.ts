@@ -8,10 +8,13 @@ import { waitUntil } from '@vercel/functions';
 interface StartGenerationPayload {
   originalImageB64: string;
   processedImageB64?: string; // 抠图后的图片 base64（可选）
-  modelId: string;
+  primaryModelId: string;     // Task 1 使用的模型（可能被风格覆盖）
+  secondaryModelId: string;   // Task 2/3/4 使用的模型（始终全局默认）
   baseModelVariantId?: string;
   prompt?: string;
   promptOverride?: string; // 前端选中风格的主视图提示词（覆盖后端默认 PROMPT_PRIMARY）
+  styleCategorySlug?: string; // 用户选择的风格大类 slug
+  stylePresetSlug?: string;   // 用户选择的风格子类 slug
 }
 
 /**
@@ -111,6 +114,10 @@ export async function startAsyncGeneration(payload: StartGenerationPayload) {
         status: 'PENDING',
         prompt: payload.prompt || null,
         baseModelVariantId: payload.baseModelVariantId || null,
+        primaryModelId: payload.primaryModelId,
+        secondaryModelId: payload.secondaryModelId,
+        styleCategorySlug: payload.styleCategorySlug || null,
+        stylePresetSlug: payload.stylePresetSlug || null,
       }
     });
 
@@ -130,7 +137,8 @@ export async function startAsyncGeneration(payload: StartGenerationPayload) {
         headers,
         body: JSON.stringify({ 
            assetId: asset.id, 
-           modelId: payload.modelId,
+           primaryModelId: payload.primaryModelId,
+           secondaryModelId: payload.secondaryModelId,
            originalImageUrl: blob.url,
            processedImageUrl: processedBlobUrl,
            promptOverride: payload.promptOverride || null

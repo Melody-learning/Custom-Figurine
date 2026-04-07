@@ -10,6 +10,9 @@ interface FigurineGenerationGalleryProps {
   originalImageForShowcase?: string; // User's original upload (before bg removal) for showcase generation
   initialViews?: { primary: string, back: string, side: string, showcase?: string } | null;
   stylePrompt?: string;      // 前端选中风格的主视图提示词（覆盖后端默认 PROMPT_PRIMARY）
+  styleModelId?: string | null;     // 风格子类绑定的模型 ID（仅影响 primary render）
+  styleCategorySlug?: string;       // 用户选择的风格大类 slug
+  stylePresetSlug?: string;         // 用户选择的风格子类 slug
   onCancel?: () => void;
   onComplete?: (generatedImages: { primary: string, back: string, side: string, showcase?: string }, generatedAssetId?: string) => void;
   onStatusChange?: (status: StepStatus) => void;
@@ -17,7 +20,7 @@ interface FigurineGenerationGalleryProps {
 
 type StepStatus = 'IDLE' | 'GENERATING_PRIMARY' | 'PRIMARY_SUCCESS' | 'GENERATING_SECONDARY' | 'COMPLETE' | 'ERROR';
 
-export default function FigurineGenerationGallery({ subjectImageB64, originalImageForShowcase, initialViews, stylePrompt, onCancel, onComplete, onStatusChange }: FigurineGenerationGalleryProps) {
+export default function FigurineGenerationGallery({ subjectImageB64, originalImageForShowcase, initialViews, stylePrompt, styleModelId, styleCategorySlug, stylePresetSlug, onCancel, onComplete, onStatusChange }: FigurineGenerationGalleryProps) {
   const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
   
   // 从后台获取管理员配置的默认模型（第一个启用的模型）
@@ -108,9 +111,12 @@ export default function FigurineGenerationGallery({ subjectImageB64, originalIma
          const initResult = await startAsyncGeneration({
             originalImageB64: hasBgRemoved ? showcaseCleanB64 : (cleanB64 || ""),
             processedImageB64: hasBgRemoved ? (cleanB64 ? `data:image/jpeg;base64,${cleanB64}` : undefined) : undefined,
-            modelId: selectedModel,
+            primaryModelId: styleModelId || selectedModel,   // 风格模型优先，fallback 全局默认
+            secondaryModelId: selectedModel,                  // 始终全局默认
             prompt: "Auto-generated 3D Render",
             promptOverride: stylePrompt || undefined,
+            styleCategorySlug: styleCategorySlug || undefined,
+            stylePresetSlug: stylePresetSlug || undefined,
          });
 
          if (!initResult.success || !initResult.assetId) {

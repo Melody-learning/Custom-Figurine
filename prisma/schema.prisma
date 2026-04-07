@@ -115,7 +115,11 @@ model GeneratedAsset {
   showcaseImage      String?  @db.Text  // 效果展示图 URL（提示词2 生成）
   prompt             String?  @db.Text
   baseModelVariantId String?
-  modelId            String?            // 实际使用的 AI 模型 ID
+  modelId            String?            // [Deprecated] 旧字段，保留向后兼容
+  primaryModelId     String?            // Task 1 (primary render) 使用的模型 ID
+  secondaryModelId   String?            // Task 2/3/4 (back/side/showcase) 使用的模型 ID
+  styleCategorySlug  String?            // 用户选择的风格大类 slug
+  stylePresetSlug    String?            // 用户选择的风格子类 slug
   status             GenerationStatus @default(COMPLETE) // Default true for legacy, handled in code
   
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)

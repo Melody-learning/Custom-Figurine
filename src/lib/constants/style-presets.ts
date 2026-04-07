@@ -20,6 +20,8 @@ export interface StylePreset {
   primaryPrompt: string;
   /** 示意图 URL（Phase 2 由 Admin 上传配置） */
   previewImageUrl?: string;
+  /** 绑定特定 AI 模型 ID（仅影响 primary render，null 用全局默认） */
+  aiModelId?: string | null;
 }
 
 export interface StyleCategory {

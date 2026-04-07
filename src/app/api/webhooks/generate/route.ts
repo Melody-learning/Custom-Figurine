@@ -30,9 +30,9 @@ export async function POST(req: Request) {
   let assetIdToFail = '';
   
   try {
-    const { assetId, modelId, originalImageUrl, processedImageUrl, promptOverride } = await req.json();
+    const { assetId, primaryModelId, secondaryModelId, originalImageUrl, processedImageUrl, promptOverride } = await req.json();
 
-    if (!assetId || !modelId || !originalImageUrl) {
+    if (!assetId || !primaryModelId || !secondaryModelId || !originalImageUrl) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     
@@ -62,7 +62,8 @@ export async function POST(req: Request) {
     }
 
     // 1. Generate Primary Render (提示词1 — 使抠图后图片优先，支持前端风格提示词覆盖)
-    const primaryResult = await generatePrimaryRender(primaryInputBase64, modelId, promptOverride || undefined);
+    // ★ Primary render 使用 primaryModelId（可能被风格子类覆盖）
+    const primaryResult = await generatePrimaryRender(primaryInputBase64, primaryModelId, promptOverride || undefined);
     if (primaryResult.error || !primaryResult.b64_json) {
        console.error(`[Webhook:Generate] PRIMARY RENDER FAILED. Error: ${primaryResult.error}`);
        throw new Error(primaryResult.error || "Failed primary render");
@@ -72,7 +73,8 @@ export async function POST(req: Request) {
 
     // 2. Generate Secondary Views + Showcase (3-way parallel)
     // 提示词2 (showcase) 始终使用原始图片
-    const secondaryResult = await generateSecondaryViews(primaryB64, modelId, originalBase64);
+    // ★ Secondary views 使用 secondaryModelId（始终全局默认）
+    const secondaryResult = await generateSecondaryViews(primaryB64, secondaryModelId, originalBase64);
     let backB64 = secondaryResult.backViewB64;
     let sideB64 = secondaryResult.leftViewB64;
     let showcaseB64 = secondaryResult.showcaseB64;
@@ -97,7 +99,9 @@ export async function POST(req: Request) {
          backImage: backUrl as string | null,
          sideImage: sideUrl as string | null,
          showcaseImage: showcaseUrl as string | null,
-         modelId: modelId,
+         modelId: primaryModelId,           // 向后兼容旧字段
+         primaryModelId: primaryModelId,
+         secondaryModelId: secondaryModelId,
       }
     });
 
