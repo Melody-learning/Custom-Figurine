@@ -19,6 +19,7 @@ export async function GET() {
             primaryPrompt: true,
             previewImageUrl: true,
             aiModelId: true,
+            aiModel: { select: { modelId: true } },  // join 获取实际的 modelId 字符串
             sortOrder: true,
           },
         },
@@ -43,7 +44,7 @@ export async function GET() {
         name: p.name,
         primaryPrompt: p.primaryPrompt,
         previewImageUrl: p.previewImageUrl,
-        aiModelId: p.aiModelId,
+        aiModelId: p.aiModel?.modelId || null,  // ★ 返回 modelId 字符串，而非 DB 外键
         sortOrder: p.sortOrder,
       })),
     }));
