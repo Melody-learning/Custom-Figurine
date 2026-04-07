@@ -190,12 +190,43 @@ export default function CustomizePage() {
     }
   }, [selectedOptions, products]);
 
-  // 处理选项变更
+  // 判断某个选项值在当前其他选项下是否有对应的有效 variant
+  const isOptionValueAvailable = (optionName: string, value: string): boolean => {
+    if (!product) return false;
+    return product.variants.edges.some(({ node }) =>
+      node.selectedOptions.every((opt) => {
+        if (opt.name === optionName) return opt.value === value;
+        // 其他维度必须匹配当前选中值（未选中则不约束）
+        return !selectedOptions[opt.name] || selectedOptions[opt.name] === opt.value;
+      })
+    );
+  };
+
+  // 处理选项变更（含自动纠正无效组合）
   const handleOptionChange = (optionName: string, value: string) => {
-    setSelectedOptions((prev) => ({
-      ...prev,
-      [optionName]: value,
-    }));
+    const newOptions = { ...selectedOptions, [optionName]: value };
+
+    // 检查新组合是否对应一个真实 variant
+    const hasMatch = product?.variants.edges.some(({ node }) =>
+      node.selectedOptions.every((opt) => newOptions[opt.name] === opt.value)
+    );
+
+    if (!hasMatch && product) {
+      // 当前组合无效 → 找第一个包含用户所选值的有效 variant，自动纠正其他维度
+      const firstValid = product.variants.edges.find(({ node }) =>
+        node.selectedOptions.some((opt) => opt.name === optionName && opt.value === value)
+      );
+      if (firstValid) {
+        const corrected: Record<string, string> = {};
+        firstValid.node.selectedOptions.forEach((opt) => {
+          corrected[opt.name] = opt.value;
+        });
+        setSelectedOptions(corrected);
+        return;
+      }
+    }
+
+    setSelectedOptions(newOptions);
   };
 
   // 压缩图片到指定尺寸，支持 JPEG/PNG 双模式输出
@@ -1073,16 +1104,20 @@ export default function CustomizePage() {
                         <div className="flex flex-wrap gap-2.5">
                           {option.values.map((value) => {
                             const isSelected = selectedOptions[option.name] === value;
+                            const isAvailable = isOptionValueAvailable(option.name, value);
                             return (
                               <button
                                 key={value}
-                                onClick={() => handleOptionChange(option.name, value)}
-                                className={`cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium transition-all active:scale-95 ${
-                                  isSelected
-                                    ? 'border-transparent bg-black text-white shadow-md dark:bg-white dark:text-black'
-                                    : 'hover:border-gray-400 hover:bg-black/5 dark:hover:bg-white/10'
+                                onClick={() => isAvailable && handleOptionChange(option.name, value)}
+                                disabled={!isAvailable}
+                                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all active:scale-95 ${
+                                  !isAvailable
+                                    ? 'opacity-30 cursor-not-allowed line-through'
+                                    : isSelected
+                                      ? 'cursor-pointer border-transparent bg-black text-white shadow-md dark:bg-white dark:text-black'
+                                      : 'cursor-pointer hover:border-gray-400 hover:bg-black/5 dark:hover:bg-white/10'
                                 }`}
-                                style={isSelected ? {} : { borderColor: config.colors.border, color: config.colors.text }}
+                                style={isSelected && isAvailable ? {} : { borderColor: config.colors.border, color: config.colors.textMuted }}
                               >
                                 {value}
                               </button>
