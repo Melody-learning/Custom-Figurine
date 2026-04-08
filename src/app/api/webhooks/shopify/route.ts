@@ -144,6 +144,27 @@ export async function POST(req: Request) {
             console.error('WEBHOOK: Coupon revocation failed (non-blocking):', couponError);
           }
         }
+
+        // ---- GoAffPro 分销归因回调 ----
+        const affiliateRef = extractAttribute(payload, '_goaffpro_ref');
+        if (affiliateRef) {
+          try {
+            const shopDomain = process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN;
+            const goaffproRes = await fetch('https://api.goaffpro.com/order_complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ref: affiliateRef,
+                shop: shopDomain,
+                order_id: shopifyOrderId,
+              }),
+            });
+            console.log(`WEBHOOK: GoAffPro notified for ref=${affiliateRef}, order=${shopifyOrderId}, status=${goaffproRes.status}`);
+          } catch (goaffproError) {
+            // GoAffPro 回调失败不应阻塞订单处理
+            console.error('WEBHOOK: GoAffPro notification failed (non-blocking):', goaffproError);
+          }
+        }
       } else {
         if (!order.shopifyOrderId) {
           await prisma.order.update({

@@ -181,7 +181,7 @@ async function main() {
       slug: 'low-poly',
       displayName: 'Low Poly',
       name: '低多边形风格',
-      isOrderable: true,
+      isOrderable: false,
       accentColor: '#5BC0EB',
       icon: 'Triangle',
       sortOrder: 1,

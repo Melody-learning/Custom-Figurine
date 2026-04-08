@@ -104,3 +104,15 @@
 - 生成进行中：右侧进入确认的按钮不可见或 `disabled`。
 - 生成完成：右侧按钮文案「View Results & Order」，图标 `ArrowRight`。
 - 「Initialize Canvas」和「Finalize Tri-View Model」按钮已移除；ERROR 状态改为显示「Retry」按钮。
+
+## 7. 分销追踪组件 (Affiliate Tracking)
+[ADDED] 本节新增于 2026-04-08，源自 goaffpro-affiliate-tracking 变更。
+
+### 7.1 AffiliateTracker (`src/components/AffiliateTracker.tsx`)
+- **类型**: Client Component，零 UI（`return null`）
+- **挂载位置**: Root Layout `<body>` 内，包裹在 `<Suspense fallback={null}>` 中
+- **行为**: 使用 `useSearchParams()` 监听 `?ref=` URL 参数，写入 Cookie `gaf_ref`
+- **Cookie 规范**: Name=`gaf_ref`, Max-Age=2592000(30天), Path=`/`, SameSite=`Lax`, 非 HttpOnly
+- **归因模型**: Last Click — 新值覆盖旧值
+- **导出**: 同时导出 `getAffiliateCookie()` 工具函数供 CartSidebar 读取
+

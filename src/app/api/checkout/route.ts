@@ -22,6 +22,8 @@ interface CheckoutRequestBody {
   items: CheckoutItem[];
   // Optional: user can specify which coupon to use. Server validates ownership.
   selectedCouponCode?: string;
+  // Optional: GoAffPro affiliate referral code from Cookie
+  affiliateRef?: string;
 }
 
 /**
@@ -145,7 +147,7 @@ export async function POST(request: Request) {
     }
 
     const body: CheckoutRequestBody = await request.json();
-    const { items, selectedCouponCode } = body;
+    const { items, selectedCouponCode, affiliateRef } = body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -248,7 +250,8 @@ export async function POST(request: Request) {
         shopifyItems,
         userId,
         order.id,
-        resolvedDiscount?.discount // undefined if no discount
+        resolvedDiscount?.discount, // undefined if no discount
+        affiliateRef // GoAffPro affiliate ref
       );
 
       // 7. 回写 Shopify 信息到本地 Order

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, Sparkles, Loader2, ArrowRight, Check, Image as ImageIcon, Smile, Triangle, Box, Aperture } from 'lucide-react';
+import { Upload, Sparkles, Loader2, ArrowRight, Check, Image as ImageIcon, Smile, Triangle, Box, Aperture, Eye } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { getProducts, Product, ProductVariant } from '@/lib/shopify';
 import { saveGeneratedAsset } from '@/app/actions/save-asset';
@@ -658,11 +658,6 @@ export default function CustomizePage() {
                               : { backgroundColor: config.colors.backgroundAlt }
                             }
                           >
-                            {!cat.isOrderable && (
-                              <span className="absolute top-2 right-2 text-[8px] font-semibold uppercase tracking-wider bg-black/8 text-black/40 dark:bg-white/10 dark:text-white/40 px-1.5 py-0.5 rounded-full leading-none">
-                                Preview
-                              </span>
-                            )}
                             <div
                               className="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200"
                               style={{
@@ -721,28 +716,49 @@ export default function CustomizePage() {
 
                 {/* Start Crafting 按钮 — 正式启动 */}
                 <div className="pt-2">
-                  <button
-                    onClick={() => {
-                      if (!session) {
-                        if (uploadedImage) {
-                          sessionStorage.setItem('pendingCustomFigurineImage', uploadedImage);
+                  {selectedCategoryIsOrderable ? (
+                    <button
+                      onClick={() => {
+                        if (!session) {
+                          if (uploadedImage) {
+                            sessionStorage.setItem('pendingCustomFigurineImage', uploadedImage);
+                          }
+                          toast(t('loginRequired') as string);
+                          setLoginModalOpen(true);
+                          return;
                         }
-                        toast(t('loginRequired') as string);
-                        setLoginModalOpen(true);
-                        return;
-                      }
-                      setStep('generate');
-                    }}
-                    className={`w-full flex items-center justify-center gap-3 py-4 text-base font-bold rounded-2xl transition-all ${styles.button} hover:scale-[1.01] active:scale-[0.99]`}
-                  >
-                    <Sparkles className="w-5 h-5" />
-                    Start Crafting My Figurine
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
-                  {!selectedCategoryIsOrderable && (
-                    <p className="mt-2 text-xs text-center opacity-50" style={{ color: config.colors.text }}>
-                      Preview style — generation is available but ordering is not yet open.
-                    </p>
+                        setStep('generate');
+                      }}
+                      className={`w-full flex items-center justify-center gap-3 py-4 text-base font-bold rounded-2xl transition-all ${styles.button} hover:scale-[1.01] active:scale-[0.99]`}
+                    >
+                      <Sparkles className="w-5 h-5" />
+                      Start Crafting My Figurine
+                      <ArrowRight className="w-5 h-5" />
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          if (!session) {
+                            if (uploadedImage) {
+                              sessionStorage.setItem('pendingCustomFigurineImage', uploadedImage);
+                            }
+                            toast(t('loginRequired') as string);
+                            setLoginModalOpen(true);
+                            return;
+                          }
+                          setStep('generate');
+                        }}
+                        className="w-full flex items-center justify-center gap-3 py-4 text-base font-bold rounded-2xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                      >
+                        <Eye className="w-5 h-5" />
+                        Preview This Style
+                        <ArrowRight className="w-5 h-5 opacity-50" />
+                      </button>
+                      <p className="mt-2 text-xs text-center opacity-60" style={{ color: config.colors.textMuted }}>
+                        You can preview the generated result, but this style is not yet available for ordering.
+                      </p>
+                    </>
                   )}
                 </div>
               </div>
@@ -1191,7 +1207,7 @@ export default function CustomizePage() {
                         Ordering not yet available for this style
                       </button>
                       <p className="text-xs text-center font-medium" style={{ color: config.colors.textMuted }}>
-                        This style is in preview. Switch to Cartoon, Low Poly or Sculpture to place an order.
+                        This style is in preview. Switch to Cartoon or Sculpture to place an order.
                       </p>
                     </div>
                 )}

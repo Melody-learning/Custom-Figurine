@@ -219,7 +219,8 @@ export async function createCheckout(
   items: Array<{ variantId: string; quantity: number; customAttributes?: Array<{ key: string; value: string }> }>,
   userId?: string,
   localOrderId?: string,
-  discount?: { title: string; valueType: 'PERCENTAGE' | 'FIXED_AMOUNT'; value: number }
+  discount?: { title: string; valueType: 'PERCENTAGE' | 'FIXED_AMOUNT'; value: number },
+  affiliateRef?: string
 ) {
   // Build the Draft Order using standard Variant IDs 
   // This ensures the predefined catalog image from Shopify is used on the Checkout page, avoiding a gray placeholder.
@@ -265,6 +266,10 @@ export async function createCheckout(
   }
   if (userId) {
     customAttributes.push({ key: "userId", value: userId });
+  }
+  // GoAffPro 分销员追踪
+  if (affiliateRef) {
+    customAttributes.push({ key: "_goaffpro_ref", value: affiliateRef });
   }
 
   // 构造 Draft Order input

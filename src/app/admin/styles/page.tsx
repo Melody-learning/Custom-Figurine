@@ -238,6 +238,22 @@ function StyleCategoryBlock({
   const [open, setOpen] = useState(true);
   const [editingPreset, setEditingPreset] = useState<StylePreset | null | undefined>(undefined); // undefined = closed
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingOrderable, setTogglingOrderable] = useState(false);
+
+  async function toggleOrderable(e: React.MouseEvent) {
+    e.stopPropagation();
+    setTogglingOrderable(true);
+    try {
+      await adminFetch(`/api/admin/style-categories/${category.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isOrderable: !category.isOrderable }),
+      });
+      onRefresh();
+    } finally {
+      setTogglingOrderable(false);
+    }
+  }
 
   async function movePreset(preset: StylePreset, dir: 'up' | 'down') {
     const siblings = [...category.presets].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -263,24 +279,36 @@ function StyleCategoryBlock({
   return (
     <div className="border border-white/10 rounded-2xl overflow-hidden">
       {/* Category Header */}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-4 px-5 py-4 bg-white/[0.03] hover:bg-white/[0.06] transition-colors cursor-pointer"
-      >
-        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: category.accentColor }} />
-        <div className="flex-1 flex items-center gap-3 text-left">
-          <span className="text-sm font-bold text-white">{category.displayName}</span>
-          <span className="text-xs text-white/40">{category.name}</span>
-          {!category.isOrderable && (
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Preview Only</span>
-          )}
-          {!category.isActive && (
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">Inactive</span>
-          )}
-        </div>
-        <span className="text-xs text-white/30">{category.presets.length} presets</span>
-        {open ? <ChevronDown className="w-4 h-4 text-white/30 shrink-0" /> : <ChevronRight className="w-4 h-4 text-white/30 shrink-0" />}
-      </button>
+      <div className="w-full flex items-center gap-4 px-5 py-4 bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex-1 flex items-center gap-4 cursor-pointer text-left"
+        >
+          <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: category.accentColor }} />
+          <div className="flex-1 flex items-center gap-3">
+            <span className="text-sm font-bold text-white">{category.displayName}</span>
+            <span className="text-xs text-white/40">{category.name}</span>
+            {!category.isOrderable && (
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Preview Only</span>
+            )}
+            {!category.isActive && (
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">Inactive</span>
+            )}
+          </div>
+          <span className="text-xs text-white/30">{category.presets.length} presets</span>
+          {open ? <ChevronDown className="w-4 h-4 text-white/30 shrink-0" /> : <ChevronRight className="w-4 h-4 text-white/30 shrink-0" />}
+        </button>
+
+        {/* Orderable Toggle */}
+        <button
+          onClick={toggleOrderable}
+          disabled={togglingOrderable}
+          title={category.isOrderable ? 'Orderable — click to set Preview Only' : 'Preview Only — click to make Orderable'}
+          className={`shrink-0 w-9 h-5 rounded-full transition-colors cursor-pointer disabled:opacity-50 ${category.isOrderable ? 'bg-emerald-500' : 'bg-white/10'}`}
+        >
+          <div className={`w-3.5 h-3.5 rounded-full bg-white shadow mx-0.5 transition-transform ${category.isOrderable ? 'translate-x-4' : 'translate-x-0.5'}`} />
+        </button>
+      </div>
 
       {/* Presets List */}
       {open && (

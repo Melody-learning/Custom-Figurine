@@ -83,7 +83,7 @@ export const STYLE_CATEGORIES: StyleCategory[] = [
     id: 'low-poly',
     name: '低多边形风格',
     displayName: 'Low Poly',
-    isOrderable: true,
+    isOrderable: false,
     accentColor: '#5BC0EB',
     icon: 'Triangle',
     presets: [

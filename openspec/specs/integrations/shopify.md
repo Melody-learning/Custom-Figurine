@@ -51,3 +51,22 @@
 2. 在 **Supported payment methods** 中找到 **PayPal** 模块。
 3. 点击激活，并按指引输入您现有的 PayPal 企业账户凭据进行 OAuth 绑定。
 4. ** 沙盒测试声明**: 强烈建议在此处首先勾选“Enable test mode”或申请一个 PayPal Sandbox 账户，以便在我们编写前端代码期间能全链路测试整个购买流程而不会扣除您的真实款项。功能全完备验收后再关闭沙盒回到 Live 环境。
+
+## 5. GoAffPro 分销联盟追踪 (Affiliate Tracking)
+[ADDED] 本节新增于 2026-04-08，源自 goaffpro-affiliate-tracking 变更。
+
+### 5.1 前端参数捕获
+- 全局客户端组件 `AffiliateTracker`（`src/components/AffiliateTracker.tsx`）在 Root Layout 中挂载
+- 监听 URL `?ref=xxx` 参数，写入浏览器 Cookie `gaf_ref`（30 天有效期）
+- 使用 Last Click 归因模型：新值覆盖旧值
+- 同时在 `<head>` 中嵌入 GoAffPro 官方 `loader.js` 脚本作为额外保险层
+
+### 5.2 Checkout 链路注入
+- `CartSidebar` 在 Checkout 时读取 Cookie `gaf_ref`，作为 `affiliateRef` 字段传给 `/api/checkout`
+- `/api/checkout` 将 `affiliateRef` 传给 `createCheckout()` 函数
+- `createCheckout()` 在 Draft Order 的 `customAttributes` 中追加 `{ key: "_goaffpro_ref", value: affiliateRef }`
+
+### 5.3 Webhook 服务端回调
+- `/api/webhooks/shopify` 在 `orders/paid` 订单状态转为 PROCESSING 后
+- 通过 `extractAttribute(payload, '_goaffpro_ref')` 提取分销员 ref
+- 若存在，POST `https://api.goaffpro.com/order_complete` 上报订单归属（non-blocking try-catch）

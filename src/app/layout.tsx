@@ -8,6 +8,9 @@ import { CartSidebar } from "@/components/CartSidebar";
 import { Toaster } from "sonner";
 import { WelcomeModal } from "@/components/marketing/WelcomeModal";
 import { auth } from "@/auth";
+import { Suspense } from "react";
+import Script from "next/script";
+import { AffiliateTracker } from "@/components/AffiliateTracker";
 
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -28,8 +31,19 @@ export default async function RootLayout({
   const session = await auth();
   return (
     <html lang="en" suppressHydrationWarning className={`dark ${outfit.variable} ${inter.variable}`}>
+      <head>
+        {/* GoAffPro 分销联盟追踪脚本 */}
+        <Script
+          src={`https://api.goaffpro.com/loader.js?shop=${process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN}`}
+          strategy="afterInteractive"
+        />
+      </head>
       <body className="font-sans antialiased min-h-screen flex flex-col">
         <Providers>
+          {/* GoAffPro 分销参数捕获 */}
+          <Suspense fallback={null}>
+            <AffiliateTracker />
+          </Suspense>
           <Header />
           <main className="flex-1 w-full overflow-x-hidden">
             {children}

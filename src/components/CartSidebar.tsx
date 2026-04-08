@@ -7,6 +7,7 @@ import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
 import { upload } from '@vercel/blob/client';
 import { useSession } from 'next-auth/react';
+import { getAffiliateCookie } from '@/components/AffiliateTracker';
 
 interface ActiveCoupon {
   id: string;
@@ -116,12 +117,16 @@ export function CartSidebar() {
       }));
 
       // Pass user's selected coupon code to server (including __NONE__ for no coupon)
+      // Read GoAffPro affiliate cookie for commission attribution
+      const affiliateRef = getAffiliateCookie();
+
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: checkoutItems,
           selectedCouponCode: selectedCouponCode || undefined,
+          affiliateRef: affiliateRef || undefined,
         })
       });
       
