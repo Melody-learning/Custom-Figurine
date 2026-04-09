@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Upload, X, Check, Loader2 } from 'lucide-react';
 import { adminFetch } from '@/lib/admin-fetch';
+import { toast } from 'sonner';
 
 interface AiModelOption {
   id: string;
@@ -64,18 +65,18 @@ function PresetEditModal({
   async function handleImageUpload(file: File) {
     setUploading(true);
     try {
-      // 获取 Blob 直传令牌
-      const tokenRes = await fetch('/api/upload-token', {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await adminFetch('/api/admin/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: file.name, contentType: file.type }),
+        body: formData,
       });
-      const { url, uploadUrl } = await tokenRes.json();
-      // 直传到 Blob
-      await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+      if (!res.ok) throw new Error('Upload failed');
+      const { url } = await res.json();
       setPreviewImageUrl(url);
+      toast.success('Image uploaded successfully');
     } catch {
-      alert('Upload failed. Please try again.');
+      toast.error('Upload failed. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -99,6 +100,7 @@ function PresetEditModal({
             aiModelId: aiModelId || null,
           }),
         });
+        toast.success('Preset created successfully');
       } else {
         await adminFetch(`/api/admin/style-presets/${preset!.id}`, {
           method: 'PATCH',
@@ -110,9 +112,12 @@ function PresetEditModal({
             aiModelId: aiModelId || null,
           }),
         });
+        toast.success('Preset saved successfully');
       }
       onSave();
       onClose();
+    } catch {
+      toast.error('Failed to save preset');
     } finally {
       setSaving(false);
     }

@@ -8,7 +8,7 @@ import { saveGeneratedAsset } from '@/app/actions/save-asset';
 import { useTranslation } from '@/lib/useTranslation';
 import { useThemeConfig } from '@/lib/useTheme';
 import FigurineGenerationGallery from '@/components/ai/FigurineGenerationGallery';
-import { ClickableImage } from '@/components/ImageLightbox';
+import { ClickableImage, ImageLightbox } from '@/components/ImageLightbox';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -58,6 +58,7 @@ export default function CustomizePage() {
   const defaultPreset = getDefaultPreset();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(defaultPreset.categoryId);
   const [selectedPresetId, setSelectedPresetId] = useState<string>(defaultPreset.id);
+  const [previewLightbox, setPreviewLightbox] = useState<string | null>(null);
 
   // 辅助计算值
   const selectedPreset: StylePreset | undefined = findPresetById(selectedPresetId);
@@ -680,7 +681,7 @@ export default function CustomizePage() {
                   )}
                 </div>
 
-                {/* 小类 variant pills */}
+                {/* 小类 variant 选择 */}
                 {(() => {
                   const activeCat = styleCategories.find(c => c.id === selectedCategoryId);
                   if (!activeCat || activeCat.presets.length <= 1) return null;
@@ -689,30 +690,51 @@ export default function CustomizePage() {
                       <p className="text-[11px] font-semibold uppercase tracking-widest mb-2.5 opacity-40" style={{ color: config.colors.text }}>
                         Style Variant
                       </p>
-                      <div className="flex gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {activeCat.presets.map((preset) => {
                           const isPresetSelected = selectedPresetId === preset.id;
+                          const hasPreview = !!preset.previewImageUrl;
                           return (
-                            <button
-                              key={preset.id}
-                              type="button"
-                              onClick={() => setSelectedPresetId(preset.id)}
-                              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border transition-all duration-150 cursor-pointer active:scale-95 ${
-                                isPresetSelected
-                                  ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white shadow-sm'
-                                  : 'border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30 hover:bg-black/5 dark:hover:bg-white/5'
-                              }`}
-                              style={isPresetSelected ? {} : { color: config.colors.textMuted }}
-                            >
-                              {isPresetSelected && <Check className="w-3 h-3" />}
-                              {preset.name}
-                            </button>
+                            <div key={preset.id} className="relative">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPresetId(preset.id)}
+                                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border transition-all duration-150 cursor-pointer active:scale-95 ${
+                                  isPresetSelected
+                                    ? 'bg-black text-white border-black dark:bg-white dark:text-black dark:border-white shadow-sm'
+                                    : 'border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30 hover:bg-black/5 dark:hover:bg-white/5'
+                                }`}
+                                style={isPresetSelected ? {} : { color: config.colors.textMuted }}
+                              >
+                                {isPresetSelected && <Check className="w-3 h-3" />}
+                                {preset.name}
+                              </button>
+                              {/* 预览图角标 */}
+                              {hasPreview && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setPreviewLightbox(preset.previewImageUrl!); }}
+                                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black/70 dark:bg-white/80 flex items-center justify-center shadow-sm hover:scale-110 transition-transform cursor-pointer z-10"
+                                  title="View style example"
+                                >
+                                  <Eye className="w-3 h-3 text-white dark:text-black" />
+                                </button>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
                     </div>
                   );
                 })()}
+
+                {/* 风格示意图 Lightbox */}
+                <ImageLightbox
+                  src={previewLightbox || ''}
+                  alt="Style example"
+                  isOpen={!!previewLightbox}
+                  onClose={() => setPreviewLightbox(null)}
+                />
 
                 {/* Start Crafting 按钮 — 正式启动 */}
                 <div className="pt-2">
